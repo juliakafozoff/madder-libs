@@ -2,6 +2,9 @@
   "name": "client",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "resolutions": {
      "**/postcss": "7.0.39",
      "**/autoprefixer": "9.8.8"
