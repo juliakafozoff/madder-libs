@@ -34,7 +34,7 @@ const GameCreator = () => {
   const pendingDropRangeRef = useRef(null); // Track the drop position during drag
   const draggingChipRef = useRef(null); // Track chip being dragged: { id, originalIndex, originalElement }
   const [storySegments, setStorySegments] = useState([]); // Array of { type: 'text'|'placeholder', content: string, ...placeholderData }
-  const [updatedStory, setUpdatedStory] = useState("");
+  const [updatedStory, setUpdatedStory] = useState([]);
   const [isPreview, setIsPreview] = useState(false);
   // activeDropdown removed - dropdown only exists for palette pills (chipDropdown)
   const [selectedForms, setSelectedForms] = useState({}); // { verb: "past", noun: "plural", adjective: "comparative" } or undefined for default
@@ -1785,16 +1785,22 @@ const GameCreator = () => {
                 minHeight: '100px',
                 textAlign: 'center'
               }}>
-                {updatedStory.map((word, index) => {
-                  if (typeof word === "object" && word.className) {
-                    return (
-                      <span key={index} className={word.className}>
-                        {word.text}
-                      </span>
-                    );
-                  }
-                  return <span key={index}>{word}</span>;
-                })}
+                {updatedStory && updatedStory.length > 0 ? (
+                  updatedStory.map((word, index) => {
+                    if (typeof word === "object" && word.className) {
+                      return (
+                        <span key={index} className={word.className}>
+                          {word.text}
+                        </span>
+                      );
+                    }
+                    return <span key={index}>{word}</span>;
+                  })
+                ) : (
+                  <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                    No story content yet. Add some text and placeholders to see the preview.
+                  </span>
+                )}
               </div>
               <div style={{
                 display: 'flex',
