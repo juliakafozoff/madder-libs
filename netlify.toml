@@ -1,6 +1,6 @@
 [build]
   base = "client"
-  command = "yarn install --frozen-lockfile && yarn build"
+  command = "yarn install --frozen-lockfile && CI=false yarn build"
   publish = "build"
 
 [build.environment]
