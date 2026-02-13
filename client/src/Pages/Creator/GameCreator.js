@@ -30,6 +30,7 @@ const GameCreator = () => {
   const titleRef = useRef("");
   const storyAreaRef = useRef(null);
   const pendingDropRangeRef = useRef(null); // Track the drop position during drag
+  const draggingChipRef = useRef(null); // Track chip being dragged: { id, originalIndex, originalElement }
   const [storySegments, setStorySegments] = useState([]); // Array of { type: 'text'|'placeholder', content: string, ...placeholderData }
   const [updatedStory, setUpdatedStory] = useState("");
   // activeDropdown removed - dropdown only exists for palette pills (chipDropdown)
@@ -372,7 +373,95 @@ const GameCreator = () => {
       if (indicator) indicator.remove();
     }
     
-    // Get JSON payload
+    if (!storyAreaRef.current) return;
+    
+    // Check if this is a chip move (from existing chip) or new chip (from palette)
+    const chipMoveData = e.dataTransfer.getData("text/plain");
+    const isChipMove = chipMoveData && chipMoveData.startsWith("chip:");
+    
+    if (isChipMove) {
+      // Moving an existing chip
+      const chipId = chipMoveData.replace("chip:", "");
+      
+      if (!draggingChipRef.current || draggingChipRef.current.id !== chipId) {
+        // Invalid drag state, clear it
+        draggingChipRef.current = null;
+        return;
+      }
+      
+      // Find the chip element in DOM
+      const chipElement = container.querySelector(`[data-placeholder-id="${chipId}"]`);
+      if (!chipElement) {
+        // Chip not found, clear drag state
+        draggingChipRef.current = null;
+        return;
+      }
+      
+      // Use pendingDropRangeRef if available, otherwise compute from mouse coordinates
+      let dropRange = pendingDropRangeRef.current;
+      if (!dropRange) {
+        dropRange = getCaretPositionFromPoint(e.clientX, e.clientY);
+      }
+      
+      if (!dropRange) {
+        // Fallback: append at end
+        dropRange = document.createRange();
+        dropRange.selectNodeContents(container);
+        dropRange.collapse(false);
+      }
+      
+      // Ensure range is collapsed
+      if (!dropRange.collapsed) {
+        dropRange.collapse(true);
+      }
+      
+      // Check if we're dropping on the same chip (no-op)
+      if (dropRange.startContainer === chipElement || chipElement.contains(dropRange.startContainer)) {
+        draggingChipRef.current = null;
+        return;
+      }
+      
+      // Remove chip from its current position (temporarily, we'll move it)
+      const chipClone = chipElement.cloneNode(true);
+      chipElement.remove();
+      
+      // Set selection to drop range
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(dropRange);
+      
+      // Insert chip at new position
+      dropRange.insertNode(chipClone);
+      
+      // Create text node after chip if needed
+      let nextNode = chipClone.nextSibling;
+      if (!nextNode || nextNode.nodeType !== Node.TEXT_NODE) {
+        const textNode = document.createTextNode('\u200E');
+        chipClone.parentNode.insertBefore(textNode, chipClone.nextSibling);
+        nextNode = textNode;
+      } else if (nextNode.textContent === '') {
+        nextNode.textContent = '\u200E';
+      }
+      
+      // Position cursor after moved chip
+      const newRange = document.createRange();
+      newRange.setStart(nextNode, 0);
+      newRange.setEnd(nextNode, 0);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+      container.focus();
+      
+      // Sync segments from DOM
+      const inputEvent = new Event('input', { bubbles: true });
+      container.dispatchEvent(inputEvent);
+      
+      // Clear drag state
+      draggingChipRef.current = null;
+      pendingDropRangeRef.current = null;
+      return;
+    }
+    
+    // New chip from palette (existing behavior)
     const jsonData = e.dataTransfer.getData("application/json");
     if (!jsonData) return;
     
@@ -385,8 +474,6 @@ const GameCreator = () => {
     }
     
     if (payload.kind !== "placeholder") return;
-    
-    if (!storyAreaRef.current) return;
     
     // Use pendingDropRangeRef if available, otherwise compute from mouse coordinates
     let dropRange = pendingDropRangeRef.current;
@@ -476,7 +563,11 @@ const GameCreator = () => {
   const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    e.dataTransfer.dropEffect = "copy";
+    
+    // Check if dragging a chip (move) or palette pill (copy)
+    const chipMoveData = e.dataTransfer.getData("text/plain");
+    const isChipMove = chipMoveData && chipMoveData.startsWith("chip:");
+    e.dataTransfer.dropEffect = isChipMove ? "move" : "copy";
     
     // Show visual insertion indicator
     const container = storyAreaRef.current;
@@ -523,6 +614,43 @@ const GameCreator = () => {
     } catch (err) {
       // Silently fail if indicator creation fails
     }
+  };
+  
+  // Handle drag end - snap chip back if dropped outside editor
+  const handleDragEnd = (e) => {
+    // If draggingChipRef is null, the drop was successful (handleDrop cleared it)
+    if (!draggingChipRef.current) {
+      // Just clean up any remaining drag-over styling
+      const container = storyAreaRef.current;
+      if (container) {
+        container.classList.remove('drag-over');
+        const indicator = container.querySelector('.drop-indicator');
+        if (indicator) indicator.remove();
+      }
+      pendingDropRangeRef.current = null;
+      return;
+    }
+    
+    // If we get here, the drop didn't happen inside the editor (handleDrop wasn't called)
+    // Restore the chip to its original position by syncing from segments
+    const container = storyAreaRef.current;
+    if (!container) {
+      draggingChipRef.current = null;
+      return;
+    }
+    
+    // Trigger input event to sync DOM from segments (restores chip to original position)
+    const inputEvent = new Event('input', { bubbles: true });
+    container.dispatchEvent(inputEvent);
+    
+    // Clear drag state
+    draggingChipRef.current = null;
+    pendingDropRangeRef.current = null;
+    
+    // Remove drag-over styling
+    container.classList.remove('drag-over');
+    const indicator = container.querySelector('.drop-indicator');
+    if (indicator) indicator.remove();
   };
 
   const handleDragLeave = (e) => {
@@ -631,6 +759,60 @@ const GameCreator = () => {
         e.stopPropagation();
         // Allow the click to position the cursor, but don't open any dropdowns
       });
+      
+      // Make chips draggable within the editor
+      tile.setAttribute('draggable', 'true');
+      
+      // Handle drag start for chip movement
+      const handleChipDragStart = (e) => {
+        // Don't drag if clicking delete button
+        if (e.target.classList.contains('chip-delete-btn')) {
+          e.preventDefault();
+          return;
+        }
+        
+        const chipId = tile.getAttribute('data-placeholder-id');
+        if (!chipId) return;
+        
+        // Find the segment index for this chip
+        const segmentIndex = storySegments.findIndex(seg => 
+          seg.type === 'placeholder' && seg.id === chipId
+        );
+        
+        // Store drag state
+        draggingChipRef.current = {
+          id: chipId,
+          originalIndex: segmentIndex,
+          originalElement: tile
+        };
+        
+        // Set drag data to identify this as a chip move
+        e.dataTransfer.setData("text/plain", `chip:${chipId}`);
+        e.dataTransfer.effectAllowed = "move";
+        
+        // Add visual feedback (optional: make chip semi-transparent while dragging)
+        tile.style.opacity = '0.5';
+      };
+      
+      // Handle drag end for chip
+      const handleChipDragEnd = (e) => {
+        // Restore opacity (chip might have been moved, so find it again)
+        const chipId = tile.getAttribute('data-placeholder-id');
+        if (chipId) {
+          const currentChip = container.querySelector(`[data-placeholder-id="${chipId}"]`);
+          if (currentChip) {
+            currentChip.style.opacity = '1';
+          }
+        }
+      };
+      
+      // Remove old listeners if they exist (to avoid duplicates)
+      tile.removeEventListener('dragstart', handleChipDragStart);
+      tile.removeEventListener('dragend', handleChipDragEnd);
+      
+      // Add drag listeners
+      tile.addEventListener('dragstart', handleChipDragStart);
+      tile.addEventListener('dragend', handleChipDragEnd);
       
       // Attach delete button handler
       const deleteBtn = tile.querySelector('.chip-delete-btn');
@@ -1205,6 +1387,7 @@ const GameCreator = () => {
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
+            onDragEnd={handleDragEnd}
             onInput={handleStoryInput}
             onPaste={handlePaste}
             onKeyDown={handleKeyDown}
@@ -1260,7 +1443,7 @@ const GameCreator = () => {
             [contenteditable] .dropped-tile {
               color: #0081c9;
               font-weight: var(--font-weight-semibold);
-              cursor: default;
+              cursor: grab;
               user-select: none;
               display: inline-flex !important;
               align-items: center !important;
@@ -1268,6 +1451,9 @@ const GameCreator = () => {
               white-space: nowrap !important;
               max-width: 100% !important;
               position: relative !important;
+            }
+            [contenteditable] .dropped-tile:active {
+              cursor: grabbing;
             }
             [contenteditable] .dropped-tile:hover {
               background-color: rgba(0, 129, 201, 0.15);
