@@ -258,9 +258,165 @@ const GameCreator = () => {
   };
 
 
+  /**
+   * Drag-and-drop insertion implementation:
+   * 
+   * 1. getCaretPositionFromPoint: Uses document.caretRangeFromPoint (Safari/Chrome) 
+   *    or document.caretPositionFromPoint (Firefox) to get the exact drop position
+   *    from mouse coordinates. Falls back to elementFromPoint if APIs unavailable.
+   * 
+   * 2. getInsertIndexFromRange: Converts a DOM Range to a segment insertion index
+   *    by counting characters before the range start, accounting for text nodes
+   *    and placeholder chips (each counts as 1 char).
+   * 
+   * 3. handleDragOver: Shows a visual insertion caret indicator at the drop position
+   *    using a blinking blue line. Updates in real-time as the user drags.
+   * 
+   * 4. handleDrop: Prevents default, gets drop position from mouse coordinates,
+   *    calculates insertion index, splits text segments if needed, inserts the
+   *    placeholder chip, and positions cursor after the inserted chip.
+   * 
+   * Manual test cases:
+   * - Drop in the middle of a line: chip inserts at exact position
+   * - Drop between words: chip inserts between words
+   * - Backspace deletes chip cleanly: handled by handleKeyDown
+   * - Typing continues normally after chip: cursor positioned correctly
+   */
+  
+  // Helper to get caret position from mouse coordinates
+  const getCaretPositionFromPoint = (x, y) => {
+    if (!storyAreaRef.current) return null;
+    
+    // Try modern API first (Safari, Chrome)
+    if (document.caretRangeFromPoint) {
+      try {
+        return document.caretRangeFromPoint(x, y);
+      } catch (e) {
+        // Fallback if it fails
+      }
+    }
+    
+    // Try Firefox API
+    if (document.caretPositionFromPoint) {
+      try {
+        const pos = document.caretPositionFromPoint(x, y);
+        if (pos) {
+          const range = document.createRange();
+          range.setStart(pos.offsetNode, pos.offset);
+          range.setEnd(pos.offsetNode, pos.offset);
+          return range;
+        }
+      } catch (e) {
+        // Fallback if it fails
+      }
+    }
+    
+    // Fallback: use elementFromPoint and find nearest text node
+    const element = document.elementFromPoint(x, y);
+    if (!element) return null;
+    
+    const container = storyAreaRef.current;
+    if (!container.contains(element) && element !== container) return null;
+    
+    // Find the text node at this point
+    const walker = document.createTreeWalker(
+      container,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+    
+    let node;
+    let lastTextNode = null;
+    while ((node = walker.nextNode())) {
+      const rect = node.parentElement?.getBoundingClientRect();
+      if (rect && y >= rect.top && y <= rect.bottom) {
+        lastTextNode = node;
+        break;
+      }
+    }
+    
+    if (lastTextNode) {
+      const range = document.createRange();
+      // Approximate offset based on x position
+      const rect = lastTextNode.getBoundingClientRect();
+      const relativeX = x - rect.left;
+      const charWidth = rect.width / (lastTextNode.textContent.length || 1);
+      const offset = Math.min(
+        Math.max(0, Math.round(relativeX / charWidth)),
+        lastTextNode.textContent.length
+      );
+      range.setStart(lastTextNode, offset);
+      range.setEnd(lastTextNode, offset);
+      return range;
+    }
+    
+    return null;
+  };
+
+  // Helper to convert DOM range to segment insertion index
+  const getInsertIndexFromRange = (range, container) => {
+    if (!range || !container) return storySegments.length;
+    
+    // Count characters before the range start
+    let charCount = 0;
+    const startContainer = range.startContainer;
+    const startOffset = range.startOffset;
+    
+    // Walk through all nodes before the range
+    const walker = document.createTreeWalker(
+      container,
+      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT
+    );
+    
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node === startContainer) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          charCount += startOffset;
+        }
+        break;
+      }
+      
+      if (node.nodeType === Node.TEXT_NODE) {
+        charCount += node.textContent.length;
+      } else if (node.classList && node.classList.contains('dropped-tile')) {
+        // Placeholder tiles count as 1 character for positioning
+        charCount += 1;
+      }
+    }
+    
+    // Find which segment contains this position
+    let currentPos = 0;
+    for (let i = 0; i < storySegments.length; i++) {
+      const seg = storySegments[i];
+      if (seg.type === 'text') {
+        if (currentPos + seg.content.length >= charCount) {
+          return { index: i, splitPos: charCount - currentPos };
+        }
+        currentPos += seg.content.length;
+      } else {
+        // Placeholder - treat as 1 char
+        if (currentPos + 1 >= charCount) {
+          return { index: i, splitPos: null }; // Insert before this placeholder
+        }
+        currentPos += 1;
+      }
+    }
+    
+    return { index: storySegments.length, splitPos: null }; // Append at end
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Remove insertion caret indicator
+    const container = storyAreaRef.current;
+    if (container) {
+      container.classList.remove('drag-over');
+      const indicator = container.querySelector('.drop-indicator');
+      if (indicator) indicator.remove();
+    }
     
     // Get JSON payload
     const jsonData = e.dataTransfer.getData("application/json");
@@ -278,67 +434,31 @@ const GameCreator = () => {
     
     if (!storyAreaRef.current) return;
     
-    const selection = window.getSelection();
-    if (!selection.rangeCount) return;
-    
-    const range = selection.getRangeAt(0);
-    const container = storyAreaRef.current;
-    
-    // Find insertion point in segments based on cursor position
-    let charCount = 0;
-    let insertIndex = storySegments.length;
-    
-    // Count characters before cursor
-    const walker = document.createTreeWalker(
-      container,
-      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
-      {
-        acceptNode: (node) => {
-          if (node === range.startContainer) {
-            return NodeFilter.FILTER_ACCEPT;
-          }
-          if (range.startContainer.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_PRECEDING) {
-            return NodeFilter.FILTER_ACCEPT;
-          }
-          return NodeFilter.FILTER_REJECT;
-        }
+    // Get drop position from mouse coordinates
+    const dropRange = getCaretPositionFromPoint(e.clientX, e.clientY);
+    if (!dropRange) {
+      // Fallback: append at end
+      const placeholder = {
+        type: 'placeholder',
+        id: uuidv4(),
+        kind: payload.kind,
+        typeName: payload.type,
+        qualifier: payload.qualifier,
+        label: payload.label,
+        isCustom: payload.isCustom || false
+      };
+      
+      if (payload.isCustom) {
+        setCustomChips(prev => prev.filter(chip => chip !== payload.label));
       }
-    );
-    
-    let node;
-    while ((node = walker.nextNode())) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        if (node === range.startContainer) {
-          charCount += range.startOffset;
-          break;
-        } else {
-          charCount += node.textContent.length;
-        }
-      } else if (node.classList && node.classList.contains('dropped-tile')) {
-        // Placeholder tiles count as 1 character for positioning
-        charCount += 1;
-      }
+      
+      setStorySegments(prev => [...prev, placeholder]);
+      return;
     }
     
-    // Find which segment contains this position
-    let currentPos = 0;
-    for (let i = 0; i < storySegments.length; i++) {
-      const seg = storySegments[i];
-      if (seg.type === 'text') {
-        if (currentPos + seg.content.length >= charCount) {
-          insertIndex = i;
-          break;
-        }
-        currentPos += seg.content.length;
-      } else {
-        // Placeholder - treat as 1 char
-        if (currentPos + 1 >= charCount) {
-          insertIndex = i;
-          break;
-        }
-        currentPos += 1;
-      }
-    }
+    // Convert range to insertion index
+    const insertInfo = getInsertIndexFromRange(dropRange, container);
+    const { index: insertIndex, splitPos } = insertInfo;
     
     // Create placeholder
     const placeholder = {
@@ -348,11 +468,10 @@ const GameCreator = () => {
       typeName: payload.type,
       qualifier: payload.qualifier,
       label: payload.label,
-      isCustom: payload.isCustom || false // Track if this is a custom chip
+      isCustom: payload.isCustom || false
     };
     
     // If this is a custom chip, remove it from customChips
-    // Use payload.label (the original word) instead of payload.type (uppercase)
     if (payload.isCustom) {
       setCustomChips(prev => prev.filter(chip => chip !== payload.label));
     }
@@ -364,9 +483,8 @@ const GameCreator = () => {
       }
       
       const seg = prev[insertIndex];
-      if (seg.type === 'text') {
-        // Split text segment at cursor position
-        const splitPos = charCount - currentPos;
+      if (seg.type === 'text' && splitPos !== null) {
+        // Split text segment at drop position
         const before = seg.content.substring(0, splitPos);
         const after = seg.content.substring(splitPos);
         const newSegments = [...prev];
@@ -377,7 +495,7 @@ const GameCreator = () => {
         );
         return newSegments;
       } else {
-        // Insert before placeholder
+        // Insert before placeholder or at end
         const newSegments = [...prev];
         newSegments.splice(insertIndex, 0, placeholder);
         return newSegments;
@@ -398,13 +516,94 @@ const GameCreator = () => {
     }
     
     // Set cursor position after placeholder (will be handled by useEffect)
-    // The useEffect will add a zero-width space and position cursor there
+    // Store the placeholder ID so useEffect can position cursor after it
+    setTimeout(() => {
+      const placeholderElement = container?.querySelector(`[data-placeholder-id="${placeholder.id}"]`);
+      if (placeholderElement) {
+        const range = document.createRange();
+        const selection = window.getSelection();
+        
+        // Place cursor in the empty text node after the placeholder
+        let nextNode = placeholderElement.nextSibling;
+        if (nextNode && nextNode.nodeType === Node.TEXT_NODE) {
+          range.setStart(nextNode, 0);
+          range.setEnd(nextNode, 0);
+        } else {
+          // Create text node with LRM and place cursor there
+          const textNode = document.createTextNode('\u200E');
+          placeholderElement.parentNode.insertBefore(textNode, placeholderElement.nextSibling);
+          range.setStart(textNode, 0);
+          range.setEnd(textNode, 0);
+        }
+        
+        selection.removeAllRanges();
+        selection.addRange(range);
+        container?.focus();
+      }
+    }, 10);
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = "copy";
+    
+    // Show visual insertion indicator
+    const container = storyAreaRef.current;
+    if (!container) return;
+    
+    container.classList.add('drag-over');
+    
+    // Get caret position from mouse coordinates
+    const dropRange = getCaretPositionFromPoint(e.clientX, e.clientY);
+    if (!dropRange) return;
+    
+    // Remove existing indicator
+    const existingIndicator = container.querySelector('.drop-indicator');
+    if (existingIndicator) existingIndicator.remove();
+    
+    // Create insertion caret indicator
+    try {
+      const rect = dropRange.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      
+      // Create a visual indicator element
+      const indicator = document.createElement('span');
+      indicator.className = 'drop-indicator';
+      indicator.style.cssText = `
+        position: absolute;
+        left: ${rect.left - containerRect.left}px;
+        top: ${rect.top - containerRect.top}px;
+        width: 2px;
+        height: ${rect.height || 20}px;
+        background-color: #0081c9;
+        pointer-events: none;
+        z-index: 1000;
+      `;
+      
+      // Insert indicator temporarily (will be removed on drop or dragleave)
+      container.style.position = 'relative';
+      container.appendChild(indicator);
+    } catch (err) {
+      // Silently fail if indicator creation fails
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    // Only remove indicator if we're actually leaving the container
+    const container = storyAreaRef.current;
+    if (!container) return;
+    
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    // Check if mouse is still within container bounds
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      container.classList.remove('drag-over');
+      const indicator = container.querySelector('.drop-indicator');
+      if (indicator) indicator.remove();
+    }
   };
 
   // Sync contentEditable DOM with segments
@@ -1046,6 +1245,7 @@ const GameCreator = () => {
             contentEditable
             onDrop={handleDrop}
             onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
             onInput={handleStoryInput}
             onPaste={handlePaste}
             onKeyDown={handleKeyDown}
@@ -1081,6 +1281,22 @@ const GameCreator = () => {
             [contenteditable]:focus {
               border-color: var(--color-primary);
               box-shadow: 0 0 0 3px rgba(243, 129, 0, 0.1);
+            }
+            [contenteditable].drag-over {
+              border-color: #0081c9;
+              background-color: rgba(0, 129, 201, 0.05);
+            }
+            [contenteditable] .drop-indicator {
+              position: absolute;
+              width: 2px;
+              background-color: #0081c9;
+              pointer-events: none;
+              z-index: 1000;
+              animation: blink 1s infinite;
+            }
+            @keyframes blink {
+              0%, 100% { opacity: 1; }
+              50% { opacity: 0.3; }
             }
             [contenteditable] .dropped-tile {
               color: #0081c9;
