@@ -4,10 +4,9 @@
   "private": true,
   "packageManager": "yarn@1.22.22",
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
   "dependencies": {
-    "@craco/craco": "^6.4.2",
     "@heroicons/react": "^1.0.5",
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
@@ -20,16 +19,16 @@
     "react-google-login": "^5.2.2",
     "react-redux": "^7.2.6",
     "react-router-dom": "^6.0.2",
-    "react-scripts": "4.0.3",
+    "react-scripts": "^5.0.1",
     "redux": "^4.1.2",
     "redux-thunk": "^2.4.1",
     "uuid": "^8.3.2",
     "web-vitals": "^1.0.1"
   },
   "scripts": {
-    "start": "cross-env TAILWIND_MODE=watch craco start",
-    "build": "node --openssl-legacy-provider ./node_modules/@craco/craco/bin/craco.js build",
-    "test": "craco test",
+    "start": "cross-env TAILWIND_MODE=watch react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
     "eject": "react-scripts eject",
     "netlify:diag": "node -e \"console.log('node', process.version); console.log('NODE_OPTIONS present:', !!process.env.NODE_OPTIONS); console.log('NODE_OPTIONS has legacy flag:', (process.env.NODE_OPTIONS||'').includes('openssl-legacy-provider'));\""
   },
@@ -51,12 +50,10 @@
       "last 1 safari version"
     ]
   },
-  "resolutions": {
-    "minimatch": "9.0.1"
-  },
   "devDependencies": {
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",
+    "react-app-rewired": "^2.2.1",
     "tailwindcss": "^3.4.0"
   },
   "proxy": "http://localhost:5001"
