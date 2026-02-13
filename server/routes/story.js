@@ -1,4 +1,5 @@
 const router = require("express").Router();
+const mongoose = require("mongoose");
 const authenticate = require("../middlewares/authenticate");
 const optionalAuthenticate = require("../middlewares/optionalAuthenticate");
 const Story = require("../models/Story");
@@ -16,6 +17,12 @@ const generateInviteCode = () => {
 };
 
 router.post("/create", optionalAuthenticate, async (req, res) => {
+  // Check if MongoDB is connected
+  if (mongoose.connection.readyState !== 1) {
+    console.error("MongoDB not connected. ReadyState:", mongoose.connection.readyState);
+    return res.status(503).json({ msg: 'Database unavailable. Please try again later.' });
+  }
+
   // Generate unique inviteCode FIRST - we'll use it no matter what
   let inviteCode;
   let attempts = 0;
