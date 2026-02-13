@@ -1773,8 +1773,12 @@ const GameCreator = () => {
 
         {isPreview && (
           <div ref={previewSectionRef} style={{ marginTop: 'var(--spacing-lg)' }}>
-            <Card style={{ backgroundColor: '#f9fafb' }}>
-              <h2 className="ui-heading ui-heading--small">Story Preview</h2>
+            <Card style={{ 
+              backgroundColor: '#f9fafb',
+              maxWidth: '800px',
+              margin: '0 auto'
+            }}>
+              <h2 className="ui-heading ui-heading--small" style={{ textAlign: 'center' }}>Story Preview</h2>
               <div style={{
                 fontSize: '18px',
                 lineHeight: '1.8',
