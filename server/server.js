@@ -6,7 +6,6 @@ const userRouter = require("./routes/user");
 const storyRouter = require("./routes/story");
 const cors = require("cors");
 
-connectDB();
 const app = express();
 
 // Apply CORS middleware BEFORE routes
@@ -17,9 +16,17 @@ const allowedOrigins = [
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
+  
+  // Log for debugging
+  if (origin && !allowedOrigins.includes(origin)) {
+    console.log(`CORS: Origin ${origin} not in allowed list:`, allowedOrigins);
+  }
+  
+  // Allow requests from allowed origins
+  if (origin && allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
   }
+  
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, authorization");
   res.header("Access-Control-Allow-Credentials", "true");
@@ -42,6 +49,15 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+// Start server first, then connect to database
+// This ensures the server can respond even if DB connection fails initially
+app.listen(PORT, async () => {
   console.log(`Server is up and running on port ${PORT}`);
+  // Connect to database after server starts
+  try {
+    await connectDB();
+  } catch (error) {
+    console.error("Failed to connect to database:", error.message);
+    // Don't exit - server can still run and return errors
+  }
 });
