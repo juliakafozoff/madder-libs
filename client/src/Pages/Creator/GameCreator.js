@@ -29,10 +29,13 @@ const GameCreator = () => {
   const [customChips, setCustomChips] = useState([]); // Array of custom chip words (only one chip per word)
   const titleRef = useRef("");
   const storyAreaRef = useRef(null);
+  const previewSectionRef = useRef(null);
+  const editorSectionRef = useRef(null);
   const pendingDropRangeRef = useRef(null); // Track the drop position during drag
   const draggingChipRef = useRef(null); // Track chip being dragged: { id, originalIndex, originalElement }
   const [storySegments, setStorySegments] = useState([]); // Array of { type: 'text'|'placeholder', content: string, ...placeholderData }
   const [updatedStory, setUpdatedStory] = useState("");
+  const [isPreview, setIsPreview] = useState(false);
   // activeDropdown removed - dropdown only exists for palette pills (chipDropdown)
   const [selectedForms, setSelectedForms] = useState({}); // { verb: "past", noun: "plural", adjective: "comparative" } or undefined for default
   const [chipDropdown, setChipDropdown] = useState(null); // { word, position: { top, left } }
@@ -65,6 +68,12 @@ const GameCreator = () => {
 
   // Handle dragstart for chips - set JSON payload
   const handleChipDragStart = (e, word, form, isCustom = false) => {
+    // Cancel drag if event originated from a no-drag element (dropdown trigger/menu)
+    if (e.target.closest && e.target.closest('[data-no-drag="true"]')) {
+      e.preventDefault();
+      return;
+    }
+    
     e.stopPropagation();
     
     const normalizedType = getInternalType(word);
@@ -1330,8 +1339,22 @@ const GameCreator = () => {
       }
     });
     
-    console.log(result);
     setUpdatedStory(result);
+    setIsPreview(true);
+    
+    // Smooth scroll to preview section
+    setTimeout(() => {
+      previewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
+  const backToEditing = () => {
+    setIsPreview(false);
+    
+    // Smooth scroll back to editor section
+    setTimeout(() => {
+      editorSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const createStory = async () => {
@@ -1369,21 +1392,42 @@ const GameCreator = () => {
     <PageShell wide>
       {token && <LogoutButton onClick={handleLogout} />}
       <Card wide>
-        <h1 className="ui-heading">Create Your Story</h1>
+        <h1 className="ui-heading" style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
+          {isPreview ? 'Preview & Share' : 'Create Your Story'}
+          {isPreview && (
+            <span style={{
+              fontSize: '12px',
+              fontWeight: 'var(--font-weight-medium)',
+              color: '#0081c9',
+              backgroundColor: 'rgba(0, 129, 201, 0.1)',
+              padding: '4px 8px',
+              borderRadius: 'var(--radius-sm)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              Preview
+            </span>
+          )}
+        </h1>
         
-        <TextInput
-          inputRef={titleRef}
-          type="text"
-          placeholder="Enter story title"
-          label="Title"
-          required
-        />
-        
-        <div className="ui-input-group" style={{ position: 'relative' }}>
-          <label className="ui-input-label">Story</label>
-          <div
-            ref={storyAreaRef}
-            contentEditable
+        <div ref={editorSectionRef} style={{
+          opacity: isPreview ? 0.6 : 1,
+          pointerEvents: isPreview ? 'none' : 'auto',
+          transition: 'opacity var(--transition-base)'
+        }}>
+          <TextInput
+            inputRef={titleRef}
+            type="text"
+            placeholder="Enter story title"
+            label="Title"
+            required
+          />
+          
+          <div className="ui-input-group" style={{ position: 'relative' }}>
+            <label className="ui-input-label">Story</label>
+            <div
+              ref={storyAreaRef}
+              contentEditable
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -1470,10 +1514,10 @@ const GameCreator = () => {
               color: #ff4444;
             }
           `}</style>
-        </div>
+          </div>
 
-        <div>
-          <label className="ui-input-label">Word Categories</label>
+          <div>
+            <label className="ui-input-label">Word Categories</label>
           <div style={{
             display: 'flex',
             flexWrap: 'wrap',
@@ -1524,7 +1568,12 @@ const GameCreator = () => {
                   <span>{chipLabel}</span>
                   {isConfigurable && (
                     <span
+                      data-no-drag="true"
+                      draggable={false}
                       onClick={(e) => handleCaretClick(e, word)}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onDragStart={(e) => e.preventDefault()}
                       style={{
                         cursor: 'pointer',
                         fontSize: '12px',
@@ -1579,6 +1628,11 @@ const GameCreator = () => {
               return (
                 <div
                   ref={chipDropdownRef}
+                  data-no-drag="true"
+                  draggable={false}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onDragStart={(e) => e.preventDefault()}
                   style={{
                     position: 'absolute',
                     top: `${chipDropdown.position.top}px`,
@@ -1599,7 +1653,12 @@ const GameCreator = () => {
                     return (
                       <div
                         key={form}
+                        data-no-drag="true"
+                        draggable={false}
                         onClick={() => handleChipFormSelect(chipDropdown.word, form)}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onDragStart={(e) => e.preventDefault()}
                         style={{
                           padding: 'var(--spacing-sm) var(--spacing-md)',
                           cursor: 'pointer',
@@ -1639,7 +1698,12 @@ const GameCreator = () => {
                         margin: 'var(--spacing-xs) 0'
                       }} />
                       <div
+                        data-no-drag="true"
+                        draggable={false}
                         onClick={() => handleChipFormSelect(chipDropdown.word, "any")}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onDragStart={(e) => e.preventDefault()}
                         style={{
                           padding: 'var(--spacing-sm) var(--spacing-md)',
                           cursor: 'pointer',
@@ -1699,39 +1763,61 @@ const GameCreator = () => {
             </form>
           </div>
         </div>
+        </div>
 
-        <Button onClick={viewStory} disabled={storySegments.length === 0}>
-          View my story!
-        </Button>
+        {!isPreview && (
+          <Button onClick={viewStory} disabled={storySegments.length === 0} style={{ marginTop: 'var(--spacing-lg)' }}>
+            Preview
+          </Button>
+        )}
 
-        {updatedStory && (
-          <Card style={{ marginTop: 'var(--spacing-lg)', backgroundColor: '#f9fafb' }}>
-            <h2 className="ui-heading ui-heading--small">Story Preview</h2>
-            <div style={{
-              fontSize: '18px',
-              lineHeight: '1.8',
-              color: 'var(--text-primary)',
-              padding: 'var(--spacing-lg)',
-              backgroundColor: 'var(--color-secondary)',
-              borderRadius: 'var(--radius-md)',
-              minHeight: '100px',
-              textAlign: 'center'
-            }}>
-              {updatedStory.map((word, index) => {
-                if (typeof word === "object" && word.className) {
-                  return (
-                    <span key={index} className={word.className}>
-                      {word.text}
-                    </span>
-                  );
-                }
-                return <span key={index}>{word}</span>;
-              })}
-            </div>
-            <Button onClick={createStory}>
-              Create my story!
-            </Button>
-          </Card>
+        {isPreview && (
+          <div ref={previewSectionRef} style={{ marginTop: 'var(--spacing-lg)' }}>
+            <Card style={{ backgroundColor: '#f9fafb' }}>
+              <h2 className="ui-heading ui-heading--small">Story Preview</h2>
+              <div style={{
+                fontSize: '18px',
+                lineHeight: '1.8',
+                color: 'var(--text-primary)',
+                padding: 'var(--spacing-lg)',
+                backgroundColor: 'var(--color-secondary)',
+                borderRadius: 'var(--radius-md)',
+                minHeight: '100px',
+                textAlign: 'center'
+              }}>
+                {updatedStory.map((word, index) => {
+                  if (typeof word === "object" && word.className) {
+                    return (
+                      <span key={index} className={word.className}>
+                        {word.text}
+                      </span>
+                    );
+                  }
+                  return <span key={index}>{word}</span>;
+                })}
+              </div>
+              <div style={{
+                display: 'flex',
+                gap: 'var(--spacing-md)',
+                marginTop: 'var(--spacing-lg)',
+                justifyContent: 'center'
+              }}>
+                <Button onClick={createStory}>
+                  Generate link
+                </Button>
+                <Button 
+                  onClick={backToEditing}
+                  style={{
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border-color)'
+                  }}
+                >
+                  Back to editing
+                </Button>
+              </div>
+            </Card>
+          </div>
         )}
       </Card>
     </PageShell>
