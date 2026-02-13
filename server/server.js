@@ -43,11 +43,15 @@ app.use(express.json());
 
 // Health check endpoint (before routes, no auth needed)
 app.get("/health", (req, res) => {
+  const mongoState = mongoose.connection.readyState;
+  const mongoStateText = ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoState] || 'unknown';
+  
   res.status(200).json({
     ok: true,
     uptime: process.uptime(),
-    mongoState: mongoose.connection.readyState, // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
-    mongoStateText: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown',
+    mongoState: mongoState,
+    mongoStateText: mongoStateText,
+    mongoUriSet: !!process.env.MONGO_URI,
     time: new Date().toISOString(),
   });
 });
@@ -65,11 +69,25 @@ const PORT = process.env.PORT || 5000;
 // This ensures the server can respond even if DB connection fails initially
 app.listen(PORT, async () => {
   console.log(`Server is up and running on port ${PORT}`);
+  console.log(`MONGO_URI is set: ${!!process.env.MONGO_URI}`);
+  
   // Connect to database after server starts
   try {
     await connectDB();
+    console.log("MongoDB connection successful");
   } catch (error) {
     console.error("Failed to connect to database:", error.message);
+    console.error("Server will continue running but database operations will fail");
     // Don't exit - server can still run and return errors
+    // Set up retry logic
+    setTimeout(async () => {
+      console.log("Retrying MongoDB connection...");
+      try {
+        await connectDB();
+        console.log("MongoDB reconnection successful");
+      } catch (retryError) {
+        console.error("MongoDB reconnection failed:", retryError.message);
+      }
+    }, 30000); // Retry after 30 seconds
   }
 });
