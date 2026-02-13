@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "yarn@1.22.22",
   "engines": {
-    "node": "20.x"
+    "node": "18.x"
   },
   "dependencies": {
     "@craco/craco": "^6.4.2",
@@ -50,6 +50,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "resolutions": {
+    "minimatch": "9.0.1"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.0",

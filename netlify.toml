@@ -4,6 +4,6 @@
   publish = "build"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "18"
   NODE_OPTIONS = ""
 
