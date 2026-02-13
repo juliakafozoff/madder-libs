@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const express = require("express");
+const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 const userRouter = require("./routes/user");
 const storyRouter = require("./routes/story");
@@ -39,6 +40,17 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+
+// Health check endpoint (before routes, no auth needed)
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    ok: true,
+    uptime: process.uptime(),
+    mongoState: mongoose.connection.readyState, // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+    mongoStateText: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown',
+    time: new Date().toISOString(),
+  });
+});
 
 app.use("/user", userRouter);
 app.use("/story", storyRouter);
