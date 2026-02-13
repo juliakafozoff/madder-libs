@@ -28,7 +28,7 @@
   },
   "scripts": {
     "start": "cross-env TAILWIND_MODE=watch craco start",
-    "build": "craco build",
+    "build": "node --openssl-legacy-provider ./node_modules/@craco/craco/bin/craco.js build",
     "test": "craco test",
     "eject": "react-scripts eject",
     "netlify:diag": "node -e \"console.log('node', process.version); console.log('NODE_OPTIONS present:', !!process.env.NODE_OPTIONS); console.log('NODE_OPTIONS has legacy flag:', (process.env.NODE_OPTIONS||'').includes('openssl-legacy-provider'));\""
