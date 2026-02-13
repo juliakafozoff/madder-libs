@@ -104,7 +104,7 @@ const GameCreator = () => {
     if (normalizedType === "noun") {
       return ["plural"]; // Only show plural (singular is implicit)
     } else if (normalizedType === "verb") {
-      return ["past", "gerund", "future", "present-3rd"]; // Exclude "any", "base", "past-participle"
+      return ["past", "gerund", "present-3rd"]; // Exclude "any", "base", "past-participle", "future"
     } else if (normalizedType === "adjective") {
       return ["comparative", "superlative"]; // Exclude "any" and "base"
     } else if (normalizedType === "time") {
@@ -113,6 +113,14 @@ const GameCreator = () => {
       return ["specific-person", "type-of-person"];
     }
     return []; // Other types have no dropdown
+  };
+  
+  // Normalize qualifier - gracefully degrade deprecated "future" to "any"
+  const normalizeQualifier = (qualifier, type) => {
+    if (qualifier === "future") {
+      return "any"; // Map deprecated "future" to default
+    }
+    return qualifier;
   };
 
   // Get display label for dropdown options
@@ -128,8 +136,6 @@ const GameCreator = () => {
         return { label: "Past", example: "(walked)" };
       } else if (form === "gerund") {
         return { label: "-ing", example: "(walking)" };
-      } else if (form === "future") {
-        return { label: "Future", example: "(will walk)" };
       } else if (form === "present-3rd") {
         return { label: "He/She/It", example: "(walks)" };
       }
@@ -252,8 +258,6 @@ const GameCreator = () => {
         return { example: "walked", suffix: "-ed" };
       } else if (form === "gerund") {
         return { example: "walking", suffix: "-ing" };
-      } else if (form === "future") {
-        return { example: "will walk", suffix: "" };
       }
     } else if (normalizedType === "adjective") {
       if (form === "base") {
@@ -1018,7 +1022,9 @@ const GameCreator = () => {
           const placeholderId = node.getAttribute('data-placeholder-id');
           const isCustom = node.getAttribute('data-placeholder-custom') === 'true';
           const typeName = node.getAttribute('data-placeholder-type');
-          const qualifier = node.getAttribute('data-placeholder-qualifier') || 'any';
+          const rawQualifier = node.getAttribute('data-placeholder-qualifier') || 'any';
+          // Gracefully degrade deprecated "future" qualifier to "any"
+          const qualifier = normalizeQualifier(rawQualifier, typeName);
           const kind = node.getAttribute('data-placeholder-kind') || 'placeholder';
           
           // Get label from text content (excluding delete button)
@@ -1033,8 +1039,13 @@ const GameCreator = () => {
             : null;
           
           if (existingPlaceholder) {
-            // Preserve existing placeholder data
-            newSegments.push({ ...existingPlaceholder, isCustom: isCustom || existingPlaceholder.isCustom });
+            // Preserve existing placeholder data, but normalize qualifier if needed
+            const normalizedQualifier = normalizeQualifier(existingPlaceholder.qualifier, existingPlaceholder.typeName);
+            newSegments.push({ 
+              ...existingPlaceholder, 
+              qualifier: normalizedQualifier,
+              isCustom: isCustom || existingPlaceholder.isCustom 
+            });
           } else {
             // Create new placeholder from DOM data attributes (for chips inserted directly)
             newSegments.push({
@@ -1303,11 +1314,13 @@ const GameCreator = () => {
     
     storySegments.forEach(segment => {
       if (segment.type === 'placeholder') {
+        // Gracefully degrade deprecated "future" qualifier to "any"
+        const normalizedQualifier = normalizeQualifier(segment.qualifier, segment.typeName);
         result.push({
           tag: "span",
           className: "filled-word",
           text: segment.label || segment.typeName, // Use display label (e.g., "Thing") instead of internal type (e.g., "NOUN")
-          form: segment.qualifier,
+          form: normalizedQualifier,
         });
       } else {
         // Text segment - check for inline blanks and convert to chips
