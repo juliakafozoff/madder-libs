@@ -29,6 +29,7 @@ const GameCreator = () => {
   const [customChips, setCustomChips] = useState([]); // Array of custom chip words (only one chip per word)
   const titleRef = useRef("");
   const storyAreaRef = useRef(null);
+  const pendingDropRangeRef = useRef(null); // Track the drop position during drag
   const [storySegments, setStorySegments] = useState([]); // Array of { type: 'text'|'placeholder', content: string, ...placeholderData }
   const [updatedStory, setUpdatedStory] = useState("");
   // activeDropdown removed - dropdown only exists for palette pills (chipDropdown)
@@ -265,32 +266,34 @@ const GameCreator = () => {
    *    or document.caretPositionFromPoint (Firefox) to get the exact drop position
    *    from mouse coordinates. Falls back to elementFromPoint if APIs unavailable.
    * 
-   * 2. getInsertIndexFromRange: Converts a DOM Range to a segment insertion index
-   *    by counting characters before the range start, accounting for text nodes
-   *    and placeholder chips (each counts as 1 char).
+   * 2. handleDragOver: Computes caret range from mouse coordinates, stores it in
+   *    pendingDropRangeRef, and shows a visual insertion caret indicator.
    * 
-   * 3. handleDragOver: Shows a visual insertion caret indicator at the drop position
-   *    using a blinking blue line. Updates in real-time as the user drags.
-   * 
-   * 4. handleDrop: Prevents default, gets drop position from mouse coordinates,
-   *    calculates insertion index, splits text segments if needed, inserts the
-   *    placeholder chip, and positions cursor after the inserted chip.
+   * 3. handleDrop: Uses pendingDropRangeRef to insert chip directly into DOM at
+   *    the exact caret position using range.insertNode(). Then syncs segments from DOM.
    * 
    * Manual test cases:
-   * - Drop in the middle of a line: chip inserts at exact position
-   * - Drop between words: chip inserts between words
-   * - Backspace deletes chip cleanly: handled by handleKeyDown
-   * - Typing continues normally after chip: cursor positioned correctly
+   * - Drop between "Of" and "lovers": chip inserts between words ✓
+   * - Drop in middle of word: caret splits text node ✓
+   * - Drop at beginning of line: chip inserts at start ✓
+   * - After drop, typing continues right after chip ✓
+   * - Backspace deletes chip cleanly ✓
    */
   
   // Helper to get caret position from mouse coordinates
   const getCaretPositionFromPoint = (x, y) => {
     if (!storyAreaRef.current) return null;
     
+    const container = storyAreaRef.current;
+    
     // Try modern API first (Safari, Chrome)
     if (document.caretRangeFromPoint) {
       try {
-        return document.caretRangeFromPoint(x, y);
+        const range = document.caretRangeFromPoint(x, y);
+        // Ensure range is within our container
+        if (range && container.contains(range.startContainer)) {
+          return range;
+        }
       } catch (e) {
         // Fallback if it fails
       }
@@ -300,7 +303,7 @@ const GameCreator = () => {
     if (document.caretPositionFromPoint) {
       try {
         const pos = document.caretPositionFromPoint(x, y);
-        if (pos) {
+        if (pos && container.contains(pos.offsetNode)) {
           const range = document.createRange();
           range.setStart(pos.offsetNode, pos.offset);
           range.setEnd(pos.offsetNode, pos.offset);
@@ -311,11 +314,10 @@ const GameCreator = () => {
       }
     }
     
-    // Fallback: use elementFromPoint and find nearest text node
+    // Fallback: find nearest text node and approximate position
     const element = document.elementFromPoint(x, y);
     if (!element) return null;
     
-    const container = storyAreaRef.current;
     if (!container.contains(element) && element !== container) return null;
     
     // Find the text node at this point
@@ -328,7 +330,7 @@ const GameCreator = () => {
     let node;
     let lastTextNode = null;
     while ((node = walker.nextNode())) {
-      const rect = node.parentElement?.getBoundingClientRect();
+      const rect = node.getBoundingClientRect();
       if (rect && y >= rect.top && y <= rect.bottom) {
         lastTextNode = node;
         break;
@@ -340,7 +342,8 @@ const GameCreator = () => {
       // Approximate offset based on x position
       const rect = lastTextNode.getBoundingClientRect();
       const relativeX = x - rect.left;
-      const charWidth = rect.width / (lastTextNode.textContent.length || 1);
+      const textLength = lastTextNode.textContent.length || 1;
+      const charWidth = rect.width / textLength;
       const offset = Math.min(
         Math.max(0, Math.round(relativeX / charWidth)),
         lastTextNode.textContent.length
@@ -350,60 +353,11 @@ const GameCreator = () => {
       return range;
     }
     
-    return null;
-  };
-
-  // Helper to convert DOM range to segment insertion index
-  const getInsertIndexFromRange = (range, container) => {
-    if (!range || !container) return storySegments.length;
-    
-    // Count characters before the range start
-    let charCount = 0;
-    const startContainer = range.startContainer;
-    const startOffset = range.startOffset;
-    
-    // Walk through all nodes before the range
-    const walker = document.createTreeWalker(
-      container,
-      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT
-    );
-    
-    let node;
-    while ((node = walker.nextNode())) {
-      if (node === startContainer) {
-        if (node.nodeType === Node.TEXT_NODE) {
-          charCount += startOffset;
-        }
-        break;
-      }
-      
-      if (node.nodeType === Node.TEXT_NODE) {
-        charCount += node.textContent.length;
-      } else if (node.classList && node.classList.contains('dropped-tile')) {
-        // Placeholder tiles count as 1 character for positioning
-        charCount += 1;
-      }
-    }
-    
-    // Find which segment contains this position
-    let currentPos = 0;
-    for (let i = 0; i < storySegments.length; i++) {
-      const seg = storySegments[i];
-      if (seg.type === 'text') {
-        if (currentPos + seg.content.length >= charCount) {
-          return { index: i, splitPos: charCount - currentPos };
-        }
-        currentPos += seg.content.length;
-      } else {
-        // Placeholder - treat as 1 char
-        if (currentPos + 1 >= charCount) {
-          return { index: i, splitPos: null }; // Insert before this placeholder
-        }
-        currentPos += 1;
-      }
-    }
-    
-    return { index: storySegments.length, splitPos: null }; // Append at end
+    // Last resort: create range at end of container
+    const range = document.createRange();
+    range.selectNodeContents(container);
+    range.collapse(false); // Collapse to end
+    return range;
   };
 
   const handleDrop = (e) => {
@@ -434,73 +388,73 @@ const GameCreator = () => {
     
     if (!storyAreaRef.current) return;
     
-    // Get drop position from mouse coordinates
-    const dropRange = getCaretPositionFromPoint(e.clientX, e.clientY);
+    // Use pendingDropRangeRef if available, otherwise compute from mouse coordinates
+    let dropRange = pendingDropRangeRef.current;
     if (!dropRange) {
-      // Fallback: append at end
-      const placeholder = {
-        type: 'placeholder',
-        id: uuidv4(),
-        kind: payload.kind,
-        typeName: payload.type,
-        qualifier: payload.qualifier,
-        label: payload.label,
-        isCustom: payload.isCustom || false
-      };
-      
-      if (payload.isCustom) {
-        setCustomChips(prev => prev.filter(chip => chip !== payload.label));
-      }
-      
-      setStorySegments(prev => [...prev, placeholder]);
-      return;
+      dropRange = getCaretPositionFromPoint(e.clientX, e.clientY);
     }
     
-    // Convert range to insertion index
-    const insertInfo = getInsertIndexFromRange(dropRange, container);
-    const { index: insertIndex, splitPos } = insertInfo;
+    if (!dropRange) {
+      // Last resort fallback: append at end
+      dropRange = document.createRange();
+      dropRange.selectNodeContents(container);
+      dropRange.collapse(false);
+    }
     
-    // Create placeholder
-    const placeholder = {
-      type: 'placeholder',
-      id: uuidv4(),
-      kind: payload.kind,
-      typeName: payload.type,
-      qualifier: payload.qualifier,
-      label: payload.label,
-      isCustom: payload.isCustom || false
-    };
+    // Create placeholder chip element with all necessary data attributes
+    const placeholderId = uuidv4();
+    const isCustomAttr = payload.isCustom ? 'data-placeholder-custom="true"' : '';
+    const chipHTML = `<span class="dropped-tile" data-placeholder-id="${placeholderId}" data-placeholder-type="${payload.type}" data-placeholder-qualifier="${payload.qualifier || 'any'}" data-placeholder-kind="${payload.kind}" ${isCustomAttr} contenteditable="false" style="color: #0081c9; font-weight: var(--font-weight-semibold); cursor: default; user-select: none; padding: 6px 18px 6px 10px; border-radius: 8px; background-color: rgba(0, 129, 201, 0.1); margin: 0 2px; display: inline-flex; align-items: center; vertical-align: baseline; white-space: nowrap; max-width: 100%; unicode-bidi: isolate; direction: ltr; position: relative;">
+      ${payload.label}
+      <button class="chip-delete-btn" data-placeholder-id="${placeholderId}" style="position: absolute; top: 2px; right: 4px; cursor: pointer; color: #f2a0a0; font-size: 12px; line-height: 12px; background: transparent; border: none; padding: 0; user-select: none; pointer-events: auto; font-weight: bold;">×</button>
+    </span>`;
+    
+    // Create a temporary container to parse the HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = chipHTML;
+    const chipElement = tempDiv.firstElementChild;
+    
+    // Ensure range is collapsed (caret position, not selection)
+    if (!dropRange.collapsed) {
+      dropRange.collapse(true); // Collapse to start
+    }
+    
+    // Set the selection to the drop range (for visual feedback)
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(dropRange);
+    
+    // Insert the chip directly into the DOM at the caret position
+    // This will split text nodes automatically if needed
+    dropRange.insertNode(chipElement);
+    
+    // Create a text node after the chip for cursor positioning (if it doesn't exist)
+    let nextNode = chipElement.nextSibling;
+    if (!nextNode || nextNode.nodeType !== Node.TEXT_NODE) {
+      const textNode = document.createTextNode('\u200E');
+      chipElement.parentNode.insertBefore(textNode, chipElement.nextSibling);
+      nextNode = textNode;
+    } else if (nextNode.textContent === '') {
+      nextNode.textContent = '\u200E';
+    }
+    
+    // Position cursor after the inserted chip
+    const newRange = document.createRange();
+    newRange.setStart(nextNode, 0);
+    newRange.setEnd(nextNode, 0);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+    container.focus();
     
     // If this is a custom chip, remove it from customChips
     if (payload.isCustom) {
       setCustomChips(prev => prev.filter(chip => chip !== payload.label));
     }
     
-    // Insert placeholder into segments
-    setStorySegments(prev => {
-      if (insertIndex === prev.length) {
-        return [...prev, placeholder];
-      }
-      
-      const seg = prev[insertIndex];
-      if (seg.type === 'text' && splitPos !== null) {
-        // Split text segment at drop position
-        const before = seg.content.substring(0, splitPos);
-        const after = seg.content.substring(splitPos);
-        const newSegments = [...prev];
-        newSegments.splice(insertIndex, 1, 
-          ...(before ? [{ type: 'text', content: before }] : []),
-          placeholder,
-          ...(after ? [{ type: 'text', content: after }] : [])
-        );
-        return newSegments;
-      } else {
-        // Insert before placeholder or at end
-        const newSegments = [...prev];
-        newSegments.splice(insertIndex, 0, placeholder);
-        return newSegments;
-      }
-    });
+    // Sync segments from DOM (handleStoryInput will be called, but we need to ensure it runs)
+    // Trigger input event to sync segments
+    const inputEvent = new Event('input', { bubbles: true });
+    container.dispatchEvent(inputEvent);
     
     // If this is a qualifier pill (Verb/Thing/Adjective/Time/Person) and not a custom chip, reset it to default
     if (!payload.isCustom) {
@@ -515,32 +469,8 @@ const GameCreator = () => {
       }
     }
     
-    // Set cursor position after placeholder (will be handled by useEffect)
-    // Store the placeholder ID so useEffect can position cursor after it
-    setTimeout(() => {
-      const placeholderElement = container?.querySelector(`[data-placeholder-id="${placeholder.id}"]`);
-      if (placeholderElement) {
-        const range = document.createRange();
-        const selection = window.getSelection();
-        
-        // Place cursor in the empty text node after the placeholder
-        let nextNode = placeholderElement.nextSibling;
-        if (nextNode && nextNode.nodeType === Node.TEXT_NODE) {
-          range.setStart(nextNode, 0);
-          range.setEnd(nextNode, 0);
-        } else {
-          // Create text node with LRM and place cursor there
-          const textNode = document.createTextNode('\u200E');
-          placeholderElement.parentNode.insertBefore(textNode, placeholderElement.nextSibling);
-          range.setStart(textNode, 0);
-          range.setEnd(textNode, 0);
-        }
-        
-        selection.removeAllRanges();
-        selection.addRange(range);
-        container?.focus();
-      }
-    }, 10);
+    // Clear pending range
+    pendingDropRangeRef.current = null;
   };
 
   const handleDragOver = (e) => {
@@ -554,8 +484,12 @@ const GameCreator = () => {
     
     container.classList.add('drag-over');
     
-    // Get caret position from mouse coordinates
+    // Get caret position from mouse coordinates and store in ref
     const dropRange = getCaretPositionFromPoint(e.clientX, e.clientY);
+    if (dropRange) {
+      pendingDropRangeRef.current = dropRange;
+    }
+    
     if (!dropRange) return;
     
     // Remove existing indicator
@@ -575,14 +509,16 @@ const GameCreator = () => {
         left: ${rect.left - containerRect.left}px;
         top: ${rect.top - containerRect.top}px;
         width: 2px;
-        height: ${rect.height || 20}px;
+        height: ${Math.max(rect.height || 20, 20)}px;
         background-color: #0081c9;
         pointer-events: none;
         z-index: 1000;
       `;
       
       // Insert indicator temporarily (will be removed on drop or dragleave)
-      container.style.position = 'relative';
+      if (getComputedStyle(container).position === 'static') {
+        container.style.position = 'relative';
+      }
       container.appendChild(indicator);
     } catch (err) {
       // Silently fail if indicator creation fails
@@ -603,6 +539,7 @@ const GameCreator = () => {
       container.classList.remove('drag-over');
       const indicator = container.querySelector('.drop-indicator');
       if (indicator) indicator.remove();
+      pendingDropRangeRef.current = null;
     }
   };
 
@@ -886,16 +823,38 @@ const GameCreator = () => {
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         // Check if it's a placeholder tile
         if (node.classList && node.classList.contains('dropped-tile')) {
-          // Find the matching segment by data attribute or label
+          // Find the matching segment by data attribute or create from data attributes
           const placeholderId = node.getAttribute('data-placeholder-id');
           const isCustom = node.getAttribute('data-placeholder-custom') === 'true';
+          const typeName = node.getAttribute('data-placeholder-type');
+          const qualifier = node.getAttribute('data-placeholder-qualifier') || 'any';
+          const kind = node.getAttribute('data-placeholder-kind') || 'placeholder';
+          
+          // Get label from text content (excluding delete button)
+          const label = Array.from(node.childNodes)
+            .filter(n => n.nodeType === Node.TEXT_NODE || (n.nodeType === Node.ELEMENT_NODE && !n.classList.contains('chip-delete-btn')))
+            .map(n => n.textContent)
+            .join('')
+            .trim();
+          
           const existingPlaceholder = placeholderId 
             ? storySegments.find(s => s.type === 'placeholder' && s.id === placeholderId)
-            : storySegments.find(s => s.type === 'placeholder' && node.textContent.includes(s.typeName));
+            : null;
           
           if (existingPlaceholder) {
-            // Preserve isCustom flag
+            // Preserve existing placeholder data
             newSegments.push({ ...existingPlaceholder, isCustom: isCustom || existingPlaceholder.isCustom });
+          } else {
+            // Create new placeholder from DOM data attributes (for chips inserted directly)
+            newSegments.push({
+              type: 'placeholder',
+              id: placeholderId || uuidv4(),
+              kind: kind,
+              typeName: typeName || label.toUpperCase(),
+              qualifier: qualifier,
+              label: label || 'Placeholder',
+              isCustom: isCustom
+            });
           }
         } else {
           // Other element - get text content
