@@ -21,6 +21,7 @@ const GameCreator = () => {
     "Person",
     "Place",
     "Emotion",
+    "Color",
     "Number",
     "Size",
     "Time",
