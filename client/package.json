@@ -2,8 +2,9 @@
   "name": "client",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "yarn@1.22.22",
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   },
   "dependencies": {
     "@craco/craco": "^6.4.2",
@@ -27,9 +28,10 @@
   },
   "scripts": {
     "start": "cross-env TAILWIND_MODE=watch craco start",
-    "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider craco build",
+    "build": "craco build",
     "test": "craco test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "netlify:diag": "node -e \"console.log('node', process.version); console.log('NODE_OPTIONS present:', !!process.env.NODE_OPTIONS); console.log('NODE_OPTIONS has legacy flag:', (process.env.NODE_OPTIONS||'').includes('openssl-legacy-provider'));\""
   },
   "eslintConfig": {
     "extends": [

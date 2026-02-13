@@ -1,9 +1,8 @@
 [build]
   base = "client"
-  command = "yarn build"
-  publish = "client/build"
+  command = "yarn netlify:diag && yarn install --frozen-lockfile && yarn build"
+  publish = "build"
 
 [build.environment]
-  NODE_VERSION = "16"
-  NODE_OPTIONS = "--openssl-legacy-provider"
+  NODE_VERSION = "18"
 
