@@ -329,6 +329,14 @@
   line-height: 1.5;
 }
 
+/* Preview Card - Centered preview section */
+.preview-card {
+  width: auto !important;
+  max-width: 800px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
 /* Game Page Shell - Full-height game board layout (deprecated - use page-shell instead) */
 .game-page-shell {
   min-height: 100vh;
