@@ -1796,9 +1796,10 @@ const GameCreator = () => {
             }}
           >
             <div style={{
-              width: '100%',
               maxWidth: '672px', // max-w-2xl equivalent
-              margin: '0 auto'
+              width: 'auto',
+              margin: '0 auto',
+              flexShrink: 0
             }}>
               <Card 
                 className="preview-card"
