@@ -1787,14 +1787,24 @@ const GameCreator = () => {
         {isPreview && (
           <div 
             ref={previewSectionRef} 
-            className="w-full flex justify-center"
-            style={{ marginTop: 'var(--spacing-lg)' }}
+            style={{ 
+              marginTop: 'var(--spacing-lg)',
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'flex-start'
+            }}
           >
-            <div className="w-full max-w-2xl">
+            <div style={{
+              width: '100%',
+              maxWidth: '672px', // max-w-2xl equivalent
+              margin: '0 auto'
+            }}>
               <Card 
                 className="preview-card"
                 style={{ 
-                  backgroundColor: '#f9fafb'
+                  backgroundColor: '#f9fafb',
+                  width: '100%'
                 }}
               >
               <h2 className="ui-heading ui-heading--small" style={{ textAlign: 'center' }}>Story Preview</h2>

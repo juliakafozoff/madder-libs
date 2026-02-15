@@ -330,10 +330,7 @@
 }
 
 /* Preview Card - Centered preview section */
-/* Let Tailwind classes handle centering, just ensure Card doesn't override */
-.preview-card {
-  width: 100% !important;
-}
+/* Width and centering are handled by inline styles and container div */
 
 /* Game Page Shell - Full-height game board layout (deprecated - use page-shell instead) */
 .game-page-shell {
