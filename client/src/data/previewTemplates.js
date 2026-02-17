@@ -35,14 +35,15 @@ export const previewTemplates = [
     }
   },
   {
-    text: "The {size} {thing} was {emotion}-inducing, so I {verbPast} {adverb} and ran.",
-    highlights: ["size", "thing", "emotion", "verbPast", "adverb"],
+    text: "Why did the {thing} {verbBase} {adverb} at {timeOfDay}? Because {personType} said it was {emotion}!",
+    highlights: ["thing", "verbBase", "adverb", "timeOfDay", "personType", "emotion"],
     wordPools: {
-      size: ["gigantic", "tiny", "massive", "mini", "enormous"],
-      thing: ["spider", "cake", "robot", "dragon", "puppy"],
-      emotion: ["fear", "joy", "confusion", "excitement", "terror"],
-      verbPast: ["screamed", "laughed", "jumped", "froze", "danced"],
-      adverb: ["quickly", "wildly", "silently", "loudly", "carefully"]
+      thing: ["refrigerator", "elevator", "vending machine", "traffic light", "sink"],
+      verbBase: ["sing", "dance", "glow", "whistle", "vibrate"],
+      adverb: ["wildly", "quietly", "suddenly", "constantly", "dramatically"],
+      timeOfDay: ["midnight", "dawn", "3 AM", "sunset", "noon"],
+      personType: ["the janitor", "a wizard", "my neighbor", "the AI", "a ghost"],
+      emotion: ["necessary", "hilarious", "mandatory", "essential", "inevitable"]
     }
   },
   {
@@ -76,6 +77,17 @@ export const previewTemplates = [
     }
   },
   {
+    text: "My {thing} is {emotion}, but {personType} says it's actually a {adjective} {pluralThing}.",
+    highlights: ["thing", "emotion", "personType", "adjective", "pluralThing"],
+    wordPools: {
+      thing: ["backpack", "collection", "hobby", "secret", "plan"],
+      emotion: ["normal", "weird", "perfect", "confusing", "amazing"],
+      personType: ["my teacher", "the internet", "a fortune teller", "my cat", "the government"],
+      adjective: ["ancient", "magical", "cursed", "valuable", "dangerous"],
+      pluralThing: ["artifacts", "spells", "secrets", "treasures", "weapons"]
+    }
+  },
+  {
     text: "The {size} {thing} from {place} made everyone feel {emotion}, so we {verbPast} {adverb}.",
     highlights: ["size", "thing", "place", "emotion", "verbPast", "adverb"],
     wordPools: {
@@ -88,15 +100,15 @@ export const previewTemplates = [
     }
   },
   {
-    text: "At {timeOfDay} on {date}, {personType} told me the {adjective} {thing} was actually {emotion}.",
-    highlights: ["timeOfDay", "date", "personType", "adjective", "thing", "emotion"],
+    text: "If you {verbBase} a {thing} {adverb} on {date}, {personType} will tell you {quote}.",
+    highlights: ["verbBase", "thing", "adverb", "date", "personType", "quote"],
     wordPools: {
-      timeOfDay: ["dawn", "3:17 PM", "midnight", "sunset", "noon"],
-      date: ["July 4th", "Tuesday", "my birthday", "last week", "yesterday"],
-      personType: ["teacher", "friend", "stranger", "bully", "neighbor"],
-      adjective: ["strange", "beautiful", "mysterious", "ordinary", "magical"],
-      thing: ["story", "secret", "truth", "legend", "rumor"],
-      emotion: ["true", "false", "real", "imaginary", "possible"]
+      verbBase: ["find", "open", "eat", "touch", "read"],
+      thing: ["letter", "box", "cookie", "book", "map"],
+      adverb: ["carefully", "quickly", "backwards", "upside down", "three times"],
+      date: ["July 4th", "Tuesday", "my birthday", "a full moon", "Friday the 13th"],
+      personType: ["a wizard", "the oracle", "your future self", "a talking parrot", "the universe"],
+      quote: ["your destiny", "the secret password", "where the treasure is", "what happens next", "the meaning of life"]
     }
   },
   {
@@ -132,6 +144,27 @@ export const previewTemplates = [
       adjective: ["strange", "beautiful", "mysterious", "ordinary", "magical"],
       thing: ["discovery", "coincidence", "pattern", "secret", "message"],
       emotion: ["real", "true", "impossible", "inevitable", "surprising"]
+    }
+  },
+  {
+    text: "Warning: Do not {verbBase} the {thing} unless {personType} says it's {emotion}!",
+    highlights: ["verbBase", "thing", "personType", "emotion"],
+    wordPools: {
+      verbBase: ["touch", "open", "eat", "press", "shake"],
+      thing: ["button", "box", "cookie", "door", "lever"],
+      personType: ["the wizard", "your mom", "the manual", "a sign", "common sense"],
+      emotion: ["safe", "necessary", "mandatory", "allowed", "time"]
+    }
+  },
+  {
+    text: "Nobody expected {specificPerson} to {verbBase} a {size} {thing} {adverb}, but here we are.",
+    highlights: ["specificPerson", "verbBase", "size", "thing", "adverb"],
+    wordPools: {
+      specificPerson: ["Grandma", "the cat", "Leonard Cohen", "my teacher", "the AI"],
+      verbBase: ["build", "invent", "discover", "create", "unleash"],
+      size: ["tiny", "gigantic", "massive", "mini", "enormous"],
+      thing: ["time machine", "robot", "sandwich", "treasure", "mystery"],
+      adverb: ["yesterday", "in secret", "by accident", "on purpose", "while sleeping"]
     }
   }
 ];
