@@ -157,7 +157,7 @@ const GameCreator = () => {
       }
     } else if (normalizedType === "person") {
       if (form === "specific-person") {
-        return { label: "Specific person", example: "(Ana, Grandma, Leonard Cohen)" };
+        return { label: "Specific person", example: "(Ana, Grandma, Leonard Cohen, Elvis Presley, Oprah)" };
       } else if (form === "type-of-person") {
         return { label: "Type of person", example: "(bully, teacher, friend)" };
       }
