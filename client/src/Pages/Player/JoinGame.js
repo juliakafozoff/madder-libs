@@ -53,6 +53,16 @@ const JoinGame = () => {
     navigate(`/start/${gameIdRef.current.value}`);
   };
 
+  const handleBack = () => {
+    // If browser history has previous pages, go back
+    // Otherwise navigate to home
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/home');
+    }
+  };
+
   const token = localStorage.getItem("userToken");
 
   return (
@@ -69,6 +79,9 @@ const JoinGame = () => {
         />
         <Button onClick={joinGame}>
           Join the game
+        </Button>
+        <Button variant="tertiary" onClick={handleBack}>
+          ← Back
         </Button>
       </Card>
     </PageShell>

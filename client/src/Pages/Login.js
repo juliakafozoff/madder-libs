@@ -7,6 +7,7 @@ import PageShell from "../components/ui/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import TextInput from "../components/ui/TextInput";
+import { getSafeJwtFields } from "../utils/jwt";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -19,11 +20,40 @@ const Login = () => {
   const handleGoogle = async (googleData) => {
     console.log("=== handleGoogle called ===", googleData);
     
+    // Debug: Log frontend Google Client ID
+    const frontendClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+    console.log("[DEBUG] Frontend Google Client ID:", frontendClientId ? `${frontendClientId.substring(0, 20)}...` : "NOT SET");
+    
     // Check if this is a failure response (no tokenId)
     if (!googleData || !googleData.tokenId) {
       console.error("Google login failed: No tokenId in response", googleData);
       alert("Google login was cancelled or failed. Please try again.");
       return;
+    }
+    
+    // Debug: Decode and log token payload fields (safe)
+    const tokenFields = getSafeJwtFields(googleData.tokenId);
+    if (tokenFields) {
+      console.log("[DEBUG] Google ID Token payload fields:", {
+        aud: tokenFields.aud,
+        iss: tokenFields.iss,
+        azp: tokenFields.azp,
+        exp: tokenFields.exp,
+        email: tokenFields.email,
+        tokenType: "id_token"
+      });
+      console.log("[DEBUG] Token audience (aud):", tokenFields.aud);
+      console.log("[DEBUG] Expected audience (frontend client ID):", frontendClientId);
+      
+      // Check for audience mismatch
+      if (tokenFields.aud && frontendClientId && tokenFields.aud !== frontendClientId) {
+        const errorMsg = `Google OAuth audience mismatch. Token audience: ${tokenFields.aud}, Expected: ${frontendClientId}. Please ensure REACT_APP_GOOGLE_CLIENT_ID matches the Google OAuth client ID used to generate the token.`;
+        console.error("[ERROR]", errorMsg);
+        alert(errorMsg);
+        return;
+      }
+    } else {
+      console.warn("[DEBUG] Could not decode JWT token payload");
     }
     
     console.log("Google tokenId received:", googleData.tokenId.substring(0, 50) + "...");
@@ -75,7 +105,16 @@ const Login = () => {
         window.location.href = "/home";
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.msg || error.message || "Google login failed. Please try again.";
+      let errorMessage = error.response?.data?.msg || error.message || "Google login failed. Please try again.";
+      
+      // Enhanced error handling for audience mismatch
+      if (errorMessage.includes("Wrong recipient") || errorMessage.includes("audience")) {
+        const tokenFields = getSafeJwtFields(googleData.tokenId);
+        if (tokenFields) {
+          errorMessage = `Google OAuth audience mismatch. Token audience: ${tokenFields.aud}, Backend expected: ${frontendClientId}. Please ensure REACT_APP_GOOGLE_CLIENT_ID (frontend) matches GOOGLE_CLIENT_ID (backend).`;
+        }
+      }
+      
       console.error("Google login error:", {
         message: errorMessage,
         response: error.response?.data,
