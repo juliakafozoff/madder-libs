@@ -9,6 +9,7 @@ import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import LogoutButton from "../../components/ui/LogoutButton";
 import RotatingLogo from "../../components/RotatingLogo";
+import { advanceLogoIndex } from "../../utils/logoRotation";
 import { useDispatch } from "react-redux";
 import { autoLogout } from "../../store/actions/auth";
 
@@ -101,6 +102,8 @@ const CreateGame = () => {
         const story = response.data.story;
         if (story.inviteCode) {
           setInviteCode(story.inviteCode);
+          // Advance logo when invite code is successfully created
+          advanceLogoIndex();
         } else {
           console.warn("createGame: story exists but no inviteCode, fetching again", {
             storyId: story.storyId,
@@ -125,6 +128,8 @@ const CreateGame = () => {
             if (fetchResponse.data.story?.inviteCode) {
               console.log("createGame: fetched inviteCode successfully", fetchResponse.data.story.inviteCode);
               setInviteCode(fetchResponse.data.story.inviteCode);
+              // Advance logo when invite code is successfully fetched
+              advanceLogoIndex();
             } else {
               console.error("createGame: fetched story but still no inviteCode");
               setError("Game created but invite code not found. The server may need to be restarted. Please try again.");
