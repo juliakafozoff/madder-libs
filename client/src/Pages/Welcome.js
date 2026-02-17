@@ -80,6 +80,37 @@ const Welcome = () => {
             New here? Sign up for free
           </button>
         </div>
+        <div style={{
+          textAlign: 'center',
+          marginTop: '12px'
+        }}>
+          <button
+            onClick={() => navigate("/join")}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-primary)',
+              fontSize: '14px',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              padding: '4px',
+              fontFamily: 'inherit',
+              fontWeight: 400,
+              opacity: 0.8,
+              transition: 'opacity 0.2s ease, color 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.textDecoration = 'underline';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '0.8';
+              e.currentTarget.style.textDecoration = 'none';
+            }}
+          >
+            Got a link or code? Join a game →
+          </button>
+        </div>
       </Card>
     </PageShell>
   );

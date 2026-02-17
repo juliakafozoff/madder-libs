@@ -1,6 +1,6 @@
-import React, { useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "../../axios";
 import { setStory } from "../../store/actions/story";
 import PageShell from "../../components/ui/PageShell";
@@ -13,15 +13,33 @@ import { autoLogout } from "../../store/actions/auth";
 const JoinGame = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
+  
+  const [gameCode, setGameCode] = useState("");
 
-  const gameIdRef = useRef("");
+  // Prefill game code from URL query params
+  useEffect(() => {
+    const gameParam = searchParams.get('game');
+    if (gameParam) {
+      setGameCode(gameParam);
+    }
+  }, [searchParams]);
 
   const handleLogout = async () => {
     await dispatch(autoLogout());
     navigate("/login");
   };
 
+  const handleCodeChange = (e) => {
+    setGameCode(e.target.value);
+  };
+
   const joinGame = async () => {
+    const code = gameCode.trim();
+    if (!code) {
+      return;
+    }
+
     const token = localStorage.getItem("userToken");
     const headers = {
       "Content-Type": "application/json",
@@ -32,14 +50,14 @@ const JoinGame = () => {
       headers.authorization = token;
     }
     
-    const response = await axios.get(`/story/get/${gameIdRef.current.value}`, {
+    const response = await axios.get(`/story/get/${code}`, {
       headers,
     });
     
     // Only call /play if authenticated (for tracking)
     if (token) {
       await axios.put(
-        `/story/play/${gameIdRef.current.value}`,
+        `/story/play/${code}`,
         {},
         {
           headers: {
@@ -50,16 +68,16 @@ const JoinGame = () => {
     }
     
     dispatch(setStory(response.data.story));
-    navigate(`/start/${gameIdRef.current.value}`);
+    navigate(`/start/${code}`);
   };
 
   const handleBack = () => {
     // If browser history has previous pages, go back
-    // Otherwise navigate to home
+    // Otherwise navigate to homepage
     if (window.history.length > 1) {
       navigate(-1);
     } else {
-      navigate('/home');
+      navigate('/');
     }
   };
 
@@ -71,16 +89,36 @@ const JoinGame = () => {
       <Card>
         <h1 className="ui-heading">Join a Game</h1>
         <TextInput
-          inputRef={gameIdRef}
           type="text"
           placeholder="Enter game code"
           label="Game Code"
+          value={gameCode}
+          onChange={handleCodeChange}
           required
         />
-        <Button onClick={joinGame}>
-          Join the game
+        {!gameCode && (
+          <p style={{
+            fontSize: '13px',
+            color: 'var(--text-secondary)',
+            marginTop: '-8px',
+            marginBottom: '0'
+          }}>
+            Paste a link or enter a code
+          </p>
+        )}
+        <Button onClick={joinGame} disabled={!gameCode.trim()}>
+          JOIN THE GAME
         </Button>
-        <Button variant="tertiary" onClick={handleBack}>
+        <Button 
+          variant="secondary" 
+          onClick={handleBack}
+          style={{
+            backgroundColor: '#ffffff',
+            borderColor: '#e5e7eb',
+            color: '#6b7280',
+            marginTop: 'var(--spacing-sm)'
+          }}
+        >
           ← Back
         </Button>
       </Card>
