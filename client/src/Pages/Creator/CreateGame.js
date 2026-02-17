@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import copy from "clipboard-copy";
 import { ClipboardCopyIcon } from "@heroicons/react/outline";
@@ -10,6 +10,17 @@ import Button from "../../components/ui/Button";
 import LogoutButton from "../../components/ui/LogoutButton";
 import { useDispatch } from "react-redux";
 import { autoLogout } from "../../store/actions/auth";
+import logoBrunetteMan from "../../assets/glad-libs-logo-brunette-man.png";
+import logoBrunetteGirl from "../../assets/glad-libs-brunette-girl.png";
+import logoBlondeGuy from "../../assets/glad-libs-blonde-guy.png";
+import logoRedHairGirl from "../../assets/glad-libs-red-hair-girl.png";
+
+const LOGO_IMAGES = [
+  logoBrunetteMan,
+  logoBrunetteGirl,
+  logoBlondeGuy,
+  logoRedHairGirl
+];
 
 const CreateGame = () => {
   const [gameId, setGameId] = useState(uuidv4());
@@ -17,9 +28,40 @@ const CreateGame = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [currentLogoIndex, setCurrentLogoIndex] = useState(0);
+  const hasIncrementedRef = useRef(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const abortControllerRef = useRef(null);
+
+  // Logo rotation logic (independent from Welcome page)
+  useEffect(() => {
+    // Read current index from localStorage
+    const storedIndex = localStorage.getItem("createGameLogoIndex");
+    let index = 0;
+    
+    if (storedIndex !== null) {
+      const parsed = parseInt(storedIndex, 10);
+      if (!isNaN(parsed) && parsed >= 0 && parsed < LOGO_IMAGES.length) {
+        index = parsed;
+      }
+    }
+    
+    setCurrentLogoIndex(index);
+    
+    // Increment for next refresh (only once, even in StrictMode)
+    if (!hasIncrementedRef.current) {
+      hasIncrementedRef.current = true;
+      const nextIndex = (index + 1) % LOGO_IMAGES.length;
+      localStorage.setItem("createGameLogoIndex", nextIndex.toString());
+    }
+    
+    // Preload all images
+    LOGO_IMAGES.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
 
   const copyInviteLink = () => {
     if (!inviteCode) return;
@@ -187,6 +229,18 @@ const CreateGame = () => {
     <PageShell>
       {token && <LogoutButton onClick={handleLogout} />}
       <Card>
+        <img 
+          src={LOGO_IMAGES[currentLogoIndex]} 
+          alt="Glad Libs" 
+          style={{
+            maxWidth: '260px',
+            width: '100%',
+            height: 'auto',
+            display: 'block',
+            margin: '0 auto',
+            marginBottom: '24px'
+          }}
+        />
         <h1 className="ui-heading ui-heading--small">Create a Game</h1>
         {!inviteCode ? (
           <>
