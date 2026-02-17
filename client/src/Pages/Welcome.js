@@ -9,6 +9,21 @@ import madLibsLogo from "../assets/madlibslogo.png";
 const Welcome = () => {
   const navigate = useNavigate();
 
+  // Shared styles for bottom links
+  const linkStyles = {
+    background: 'none',
+    border: 'none',
+    color: 'var(--color-primary)',
+    fontSize: '16px',
+    cursor: 'pointer',
+    textDecoration: 'none',
+    padding: '10px 12px',
+    fontFamily: 'inherit',
+    fontWeight: 500,
+    transition: 'all 0.2s ease',
+    borderRadius: '4px'
+  };
+
   return (
     <PageShell>
       <Card style={{ padding: '56px 48px' }}>
@@ -41,7 +56,7 @@ const Welcome = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
-          marginTop: '40px'
+          marginTop: '24px'
         }}>
           <Button onClick={() => navigate("/create")}>
             Create Your Story
@@ -56,25 +71,16 @@ const Welcome = () => {
         }}>
           <button
             onClick={() => navigate("/signup")}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-primary)',
-              fontSize: '15px',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              padding: '8px',
-              fontFamily: 'inherit',
-              fontWeight: 500,
-              transition: 'color 0.2s ease'
-            }}
+            style={linkStyles}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = 'var(--color-primary-hover)';
               e.currentTarget.style.textDecoration = 'underline';
+              e.currentTarget.style.backgroundColor = 'rgba(243, 129, 0, 0.05)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = 'var(--color-primary)';
               e.currentTarget.style.textDecoration = 'none';
+              e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
             New here? Sign up for free
@@ -82,30 +88,26 @@ const Welcome = () => {
         </div>
         <div style={{
           textAlign: 'center',
-          marginTop: '12px'
+          marginTop: '8px'
         }}>
           <button
             onClick={() => navigate("/join")}
             style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-primary)',
-              fontSize: '14px',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              padding: '4px',
-              fontFamily: 'inherit',
+              ...linkStyles,
               fontWeight: 400,
-              opacity: 0.8,
-              transition: 'opacity 0.2s ease, color 0.2s ease'
+              opacity: 0.85
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.color = 'var(--color-primary-hover)';
               e.currentTarget.style.textDecoration = 'underline';
+              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.backgroundColor = 'rgba(243, 129, 0, 0.05)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '0.8';
+              e.currentTarget.style.color = 'var(--color-primary)';
               e.currentTarget.style.textDecoration = 'none';
+              e.currentTarget.style.opacity = '0.85';
+              e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
             Got a link or code? Join a game →

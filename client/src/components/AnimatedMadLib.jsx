@@ -75,7 +75,7 @@ const AnimatedMadLib = () => {
         padding: '24px',
         backgroundColor: 'rgba(243, 129, 0, 0.08)',
         borderRadius: '16px',
-        border: '1px solid rgba(243, 129, 0, 0.15)',
+        border: '1px solid rgba(243, 129, 0, 0.3)',
         transition: 'all 0.3s ease',
         cursor: 'pointer',
         minHeight: '80px',
@@ -101,10 +101,11 @@ const AnimatedMadLib = () => {
             key={index}
             style={part.highlight ? {
               fontWeight: 700,
-              color: 'var(--color-primary)',
+              color: '#cc6900',
               transition: 'all 0.3s ease'
             } : {
-              opacity: 0.7
+              color: 'var(--text-primary)',
+              opacity: 0.85
             }}
           >
             {part.text}
