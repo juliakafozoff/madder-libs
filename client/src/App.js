@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./components/PrivateRoute";
+import LogoRouteListener from "./components/LogoRouteListener";
 import {
   CreatedGame,
   CreateGame,
@@ -34,6 +35,7 @@ const App = () => {
   return (
     <Provider store={store}>
       <Router>
+        <LogoRouteListener />
         <Routes>
           <Route path="/result" element={<GameResult />} />
           <Route path="/play" element={<PlayGame />} />
