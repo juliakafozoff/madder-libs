@@ -5,37 +5,49 @@ const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 const userRouter = require("./routes/user");
 const storyRouter = require("./routes/story");
-const cors = require("cors");
 
 const app = express();
 
 // Apply CORS middleware BEFORE routes
+// Allowlist includes both apex and www domains to support users accessing either variant
 const allowedOrigins = [
-  "http://localhost:3000",
-  process.env.FRONTEND_URL, // Your Netlify URL
+  "http://localhost:3000", // Local development
+  "https://glad-libs.com", // Production apex domain
+  "https://www.glad-libs.com", // Production www domain
+  process.env.FRONTEND_URL, // Additional frontend URL from env (if set)
 ].filter(Boolean); // Remove undefined values
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
-  // Log for debugging
-  if (origin && !allowedOrigins.includes(origin)) {
-    console.log(`CORS: Origin ${origin} not in allowed list:`, allowedOrigins);
+  // If no origin header (e.g., curl, health checks), allow the request
+  // CORS headers are only needed for browser requests
+  if (!origin) {
+    return next();
   }
   
-  // Allow requests from allowed origins
-  if (origin && allowedOrigins.includes(origin)) {
+  // Check if origin is in allowlist
+  if (allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, authorization");
+    res.header("Access-Control-Allow-Credentials", "true");
+    
+    // Handle preflight requests
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(204);
+    }
+  } else {
+    // Log blocked origins for debugging
+    console.log(`CORS: Origin ${origin} not in allowed list:`, allowedOrigins);
+    // Handle OPTIONS preflight even for blocked origins (respond but without CORS headers)
+    // Browser will see no CORS headers and block the request
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(204);
+    }
+    // For other methods, don't set CORS headers - browser will block the response
   }
   
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, authorization");
-  res.header("Access-Control-Allow-Credentials", "true");
-  
-  // Handle preflight
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(204);
-  }
   next();
 });
 
