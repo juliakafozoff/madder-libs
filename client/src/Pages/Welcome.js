@@ -1,13 +1,53 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import PageShell from "../components/ui/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import AnimatedMadLib from "../components/AnimatedMadLib";
-import madLibsLogo from "../assets/madlibslogo.png";
+import logoBrunetteMan from "../assets/glad-libs-logo-brunette-man.png";
+import logoBrunetteGirl from "../assets/glad-libs-brunette-girl.png";
+import logoBlondeGuy from "../assets/glad-libs-blonde-guy.png";
+import logoRedHairGirl from "../assets/glad-libs-red-hair-girl.png";
+
+const LOGO_IMAGES = [
+  logoBrunetteMan,
+  logoBrunetteGirl,
+  logoBlondeGuy,
+  logoRedHairGirl
+];
 
 const Welcome = () => {
   const navigate = useNavigate();
+  const [currentLogoIndex, setCurrentLogoIndex] = useState(0);
+  const hasIncrementedRef = useRef(false);
+
+  useEffect(() => {
+    // Read current index from localStorage
+    const storedIndex = localStorage.getItem("welcomeLogoIndex");
+    let index = 0;
+    
+    if (storedIndex !== null) {
+      const parsed = parseInt(storedIndex, 10);
+      if (!isNaN(parsed) && parsed >= 0 && parsed < LOGO_IMAGES.length) {
+        index = parsed;
+      }
+    }
+    
+    setCurrentLogoIndex(index);
+    
+    // Increment for next refresh (only once, even in StrictMode)
+    if (!hasIncrementedRef.current) {
+      hasIncrementedRef.current = true;
+      const nextIndex = (index + 1) % LOGO_IMAGES.length;
+      localStorage.setItem("welcomeLogoIndex", nextIndex.toString());
+    }
+    
+    // Preload all images
+    LOGO_IMAGES.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
 
   // Shared styles for bottom links
   const linkStyles = {
@@ -28,7 +68,7 @@ const Welcome = () => {
     <PageShell>
       <Card style={{ padding: '56px 48px' }}>
         <img 
-          src={madLibsLogo} 
+          src={LOGO_IMAGES[currentLogoIndex]} 
           alt="Mad Libs" 
           style={{
             maxWidth: '480px',
