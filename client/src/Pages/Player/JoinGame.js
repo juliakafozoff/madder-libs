@@ -34,11 +34,30 @@ const JoinGame = () => {
     setGameCode(e.target.value);
   };
 
+  // Extract game code from input (handles both links and codes)
+  const extractCodeFromInput = (input) => {
+    const trimmed = input.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    // Check if input contains /start/ (invite link pattern)
+    const startMatch = trimmed.match(/\/start\/([^\/?#]+)/);
+    if (startMatch) {
+      return startMatch[1];
+    }
+
+    // If it's just a code (no URL structure), use it as-is
+    return trimmed;
+  };
+
   const joinGame = async () => {
-    const code = gameCode.trim();
-    if (!code) {
+    const extractedCode = extractCodeFromInput(gameCode);
+    if (!extractedCode) {
       return;
     }
+    
+    const code = extractedCode;
 
     const token = localStorage.getItem("userToken");
     const headers = {
