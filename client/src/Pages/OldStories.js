@@ -31,22 +31,37 @@ const OldStories = () => {
         });
         
         if (response.data.success && response.data.user.storiesCreated) {
-          // Count how many times each template has been played
-          const completedStories = JSON.parse(
-            localStorage.getItem("completedStories") || "[]"
-          );
-          
-          const templatesWithStatus = response.data.user.storiesCreated.map((template) => {
-            const playCount = completedStories.filter(
-              (result) => result.templateId === template.storyId
-            ).length;
-            
-            return {
-              ...template,
-              playCount,
-            };
+          // Fetch play counts from backend
+          const playCountPromises = response.data.user.storiesCreated.map(async (template) => {
+            try {
+              const resultsResponse = await axios.get(`/story/results/${template.storyId}`, {
+                headers: {
+                  "Content-Type": "application/json",
+                  authorization: token,
+                },
+              });
+              const playCount = resultsResponse.data.success ? resultsResponse.data.results.length : 0;
+              return {
+                ...template,
+                playCount,
+              };
+            } catch (error) {
+              console.error(`Error fetching play count for template ${template.storyId}:`, error);
+              // Fallback to localStorage count
+              const completedStories = JSON.parse(
+                localStorage.getItem("completedStories") || "[]"
+              );
+              const playCount = completedStories.filter(
+                (result) => result.templateId === template.storyId
+              ).length;
+              return {
+                ...template,
+                playCount,
+              };
+            }
           });
           
+          const templatesWithStatus = await Promise.all(playCountPromises);
           setTemplates(templatesWithStatus);
         }
       } catch (error) {
@@ -56,17 +71,82 @@ const OldStories = () => {
       }
     };
 
-    // Load completed stories from localStorage
-    const savedStoriesRaw = localStorage.getItem("completedStories");
-    const savedStories = JSON.parse(savedStoriesRaw || "[]");
-    
-    // Sort by createdAt (newest first)
-    const sortedStories = savedStories.sort((a, b) => 
-      new Date(b.createdAt) - new Date(a.createdAt)
-    );
-    setCompletedStories(sortedStories);
+    // Load completed stories from backend (for authenticated users)
+    const fetchResults = async () => {
+      try {
+        const token = localStorage.getItem("userToken");
+        if (token) {
+          // Try to fetch from backend first
+          try {
+            const response = await axios.get("/story/my-results", {
+              headers: {
+                "Content-Type": "application/json",
+                authorization: token,
+              },
+            });
+            
+            if (response.data.success && response.data.results) {
+              // Transform backend results to match localStorage format
+              const transformedResults = response.data.results.map((result) => ({
+                resultId: result.resultId,
+                templateId: result.templateId,
+                title: result.title,
+                resultText: result.resultText,
+                createdAt: result.createdAt,
+              }));
+              
+              // Merge with localStorage results (for backward compatibility)
+              const localStorageResults = JSON.parse(
+                localStorage.getItem("completedStories") || "[]"
+              );
+              
+              // Combine and deduplicate (prefer backend results)
+              const combinedResults = [...transformedResults];
+              localStorageResults.forEach((localResult) => {
+                const exists = combinedResults.some(
+                  (r) => r.resultId === localResult.resultId
+                );
+                if (!exists) {
+                  combinedResults.push(localResult);
+                }
+              });
+              
+              // Sort by createdAt (newest first)
+              const sortedStories = combinedResults.sort((a, b) => 
+                new Date(b.createdAt) - new Date(a.createdAt)
+              );
+              setCompletedStories(sortedStories);
+              return;
+            }
+          } catch (backendError) {
+            console.error("Error fetching results from backend:", backendError);
+            // Fall back to localStorage
+          }
+        }
+        
+        // Fallback to localStorage
+        const savedStoriesRaw = localStorage.getItem("completedStories");
+        const savedStories = JSON.parse(savedStoriesRaw || "[]");
+        
+        // Sort by createdAt (newest first)
+        const sortedStories = savedStories.sort((a, b) => 
+          new Date(b.createdAt) - new Date(a.createdAt)
+        );
+        setCompletedStories(sortedStories);
+      } catch (error) {
+        console.error("Error loading results:", error);
+        // Fallback to localStorage
+        const savedStoriesRaw = localStorage.getItem("completedStories");
+        const savedStories = JSON.parse(savedStoriesRaw || "[]");
+        const sortedStories = savedStories.sort((a, b) => 
+          new Date(b.createdAt) - new Date(a.createdAt)
+        );
+        setCompletedStories(sortedStories);
+      }
+    };
     
     fetchTemplates();
+    fetchResults();
   }, []);
 
   const handleLogout = async () => {
@@ -143,6 +223,19 @@ const OldStories = () => {
           }));
         }
       } else if (deleteModal.type === "result") {
+        // Try to delete from backend first
+        try {
+          const token = localStorage.getItem("userToken");
+          if (token) {
+            // Note: We don't have a delete endpoint for results yet, but we can try
+            // For now, we'll just delete from localStorage and refresh from backend
+            // TODO: Add DELETE /story/result/:resultId endpoint if needed
+          }
+        } catch (backendError) {
+          console.error("Error deleting from backend:", backendError);
+          // Continue to localStorage deletion
+        }
+        
         // Delete result from localStorage
         const savedStories = JSON.parse(
           localStorage.getItem("completedStories") || "[]"
@@ -152,7 +245,52 @@ const OldStories = () => {
         );
         localStorage.setItem("completedStories", JSON.stringify(updatedStories));
         
-        // Refresh results list
+        // Refresh results list from backend
+        try {
+          const token = localStorage.getItem("userToken");
+          if (token) {
+            const response = await axios.get("/story/my-results", {
+              headers: {
+                "Content-Type": "application/json",
+                authorization: token,
+              },
+            });
+            
+            if (response.data.success && response.data.results) {
+              const transformedResults = response.data.results.map((result) => ({
+                resultId: result.resultId,
+                templateId: result.templateId,
+                title: result.title,
+                resultText: result.resultText,
+                createdAt: result.createdAt,
+              }));
+              
+              const localStorageResults = JSON.parse(
+                localStorage.getItem("completedStories") || "[]"
+              );
+              
+              const combinedResults = [...transformedResults];
+              localStorageResults.forEach((localResult) => {
+                const exists = combinedResults.some(
+                  (r) => r.resultId === localResult.resultId
+                );
+                if (!exists) {
+                  combinedResults.push(localResult);
+                }
+              });
+              
+              const sortedStories = combinedResults.sort((a, b) => 
+                new Date(b.createdAt) - new Date(a.createdAt)
+              );
+              setCompletedStories(sortedStories);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error("Error refreshing results:", error);
+        }
+        
+        // Fallback: refresh from localStorage only
         const sortedStories = updatedStories.sort((a, b) => 
           new Date(b.createdAt) - new Date(a.createdAt)
         );

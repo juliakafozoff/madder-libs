@@ -4,6 +4,7 @@ const authenticate = require("../middlewares/authenticate");
 const optionalAuthenticate = require("../middlewares/optionalAuthenticate");
 const Story = require("../models/Story");
 const User = require("../models/User");
+const StoryResult = require("../models/StoryResult");
 
 // Generate a random invite code (5-7 characters, uppercase letters + numbers)
 const generateInviteCode = () => {
@@ -246,6 +247,93 @@ router.delete("/delete/:id", authenticate, async (req, res) => {
     res.json({ success: true, msg: "Story deleted successfully" });
   } catch (error) {
     console.error("Delete story error:", error);
+    res.status(500).json({ msg: error.message });
+  }
+});
+
+// Save a completed story result
+router.post("/result", optionalAuthenticate, async (req, res) => {
+  try {
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      console.error("MongoDB not connected. ReadyState:", mongoose.connection.readyState);
+      return res.status(503).json({ msg: 'Database unavailable. Please try again later.' });
+    }
+
+    const { resultId, templateId, title, resultText } = req.body;
+
+    if (!resultId || !templateId || !title || !resultText) {
+      return res.status(400).json({ msg: 'Missing required fields: resultId, templateId, title, resultText' });
+    }
+
+    // Find the story template to link it
+    const storyTemplate = await Story.findOne({ storyId: templateId });
+    const storyRef = storyTemplate ? storyTemplate._id : null;
+
+    // Create the result
+    const result = await StoryResult.create({
+      resultId,
+      templateId,
+      title,
+      resultText,
+      story: storyRef,
+      player: req.userId || null, // Can be null for anonymous players
+    });
+
+    console.log("Story result saved:", { resultId, templateId, player: req.userId || "anonymous" });
+
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error("Error saving story result:", error);
+    // If it's a duplicate key error, that's okay - just return success
+    if (error.code === 11000) {
+      console.log("Result already exists, returning existing result");
+      const existingResult = await StoryResult.findOne({ resultId: req.body.resultId });
+      return res.json({ success: true, result: existingResult });
+    }
+    res.status(500).json({ msg: error.message });
+  }
+});
+
+// Get all results for a specific story template
+router.get("/results/:templateId", optionalAuthenticate, async (req, res) => {
+  try {
+    const { templateId } = req.params;
+    
+    const results = await StoryResult.find({ templateId })
+      .sort({ createdAt: -1 }) // Newest first
+      .populate('player', 'name email')
+      .populate('story', 'title storyId')
+      .limit(1000); // Limit to prevent huge responses
+    
+    res.json({ success: true, results });
+  } catch (error) {
+    console.error("Error fetching story results:", error);
+    res.status(500).json({ msg: error.message });
+  }
+});
+
+// Get all results for stories created by the authenticated user
+router.get("/my-results", authenticate, async (req, res) => {
+  try {
+    // Get all stories created by this user
+    const userStories = await Story.find({ user: req.userId }).select('storyId');
+    const templateIds = userStories.map(s => s.storyId);
+    
+    if (templateIds.length === 0) {
+      return res.json({ success: true, results: [] });
+    }
+    
+    // Get all results for these templates
+    const results = await StoryResult.find({ templateId: { $in: templateIds } })
+      .sort({ createdAt: -1 }) // Newest first
+      .populate('player', 'name email')
+      .populate('story', 'title storyId')
+      .limit(1000);
+    
+    res.json({ success: true, results });
+  } catch (error) {
+    console.error("Error fetching user's story results:", error);
     res.status(500).json({ msg: error.message });
   }
 });
