@@ -223,28 +223,74 @@ const CreateGame = () => {
     navigate(`/game-creator/${gameId}`);
   };
 
+  const handleBack = () => {
+    // If browser history has previous pages, go back
+    // Otherwise navigate to home or welcome
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      const token = localStorage.getItem("userToken");
+      navigate(token ? '/home' : '/');
+    }
+  };
+
   const token = localStorage.getItem("userToken");
 
   return (
     <PageShell>
       {token && <LogoutButton onClick={handleLogout} />}
-      <Card>
+      <Card style={{ position: 'relative' }}>
+        <button
+          onClick={handleBack}
+          style={{
+            position: 'absolute',
+            top: 'var(--spacing-md)',
+            left: 'var(--spacing-md)',
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-secondary)',
+            fontSize: '13px',
+            cursor: 'pointer',
+            textDecoration: 'none',
+            padding: '4px 0',
+            fontFamily: 'inherit',
+            fontWeight: 400,
+            transition: 'color 0.2s ease',
+            zIndex: 1
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'var(--text-primary)';
+            e.currentTarget.style.textDecoration = 'underline';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--text-secondary)';
+            e.currentTarget.style.textDecoration = 'none';
+          }}
+        >
+          ← Back
+        </button>
         <img 
           src={LOGO_IMAGES[currentLogoIndex]} 
           alt="Glad Libs" 
           style={{
-            maxWidth: '260px',
+            maxWidth: '320px',
             width: '100%',
             height: 'auto',
             display: 'block',
             margin: '0 auto',
-            marginBottom: '24px'
+            marginBottom: '20px'
           }}
         />
-        <h1 className="ui-heading ui-heading--small">Create a Game</h1>
+        <h1 className="ui-heading ui-heading--small" style={{ marginTop: 0 }}>Create a Game</h1>
         {!inviteCode ? (
           <>
-            <p className="ui-text ui-text--secondary" style={{ textAlign: 'center' }}>
+            <p className="ui-text ui-text--secondary" style={{ 
+              textAlign: 'center',
+              fontSize: '14px',
+              color: '#4b5563',
+              marginTop: 'var(--spacing-sm)',
+              marginBottom: 'var(--spacing-lg)'
+            }}>
               Click below to create your game and get an invite code
             </p>
             <Button onClick={createGame} disabled={isCreating}>
@@ -267,7 +313,13 @@ const CreateGame = () => {
           </>
         ) : (
           <>
-        <p className="ui-text ui-text--secondary" style={{ textAlign: 'center' }}>
+        <p className="ui-text ui-text--secondary" style={{ 
+          textAlign: 'center',
+          fontSize: '14px',
+          color: '#4b5563',
+          marginTop: 'var(--spacing-sm)',
+          marginBottom: 'var(--spacing-md)'
+        }}>
               Invite a friend to play
         </p>
         <div style={{
