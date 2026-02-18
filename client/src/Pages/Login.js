@@ -7,6 +7,7 @@ import PageShell from "../components/ui/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import TextInput from "../components/ui/TextInput";
+import RotatingLogo from "../components/RotatingLogo";
 import { getSafeJwtFields } from "../utils/jwt";
 
 const Login = () => {
@@ -218,7 +219,12 @@ const Login = () => {
   return (
     <PageShell>
       <Card>
-        <h1 className="ui-heading">Login</h1>
+        <RotatingLogo 
+          maxWidth="320px"
+          marginBottom="20px"
+          alt="Glad Libs"
+        />
+        <h1 className="ui-heading ui-heading--small" style={{ marginTop: 0 }}>Login</h1>
         {type ? (
           <>
             <Button onClick={() => setType(false)}>
