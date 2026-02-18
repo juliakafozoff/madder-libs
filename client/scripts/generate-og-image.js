@@ -15,7 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const sourcePath = path.join(__dirname, '../src/assets/madlibslogo.png');
+const sourcePath = path.join(__dirname, '../src/assets/glad-libs-brunette-girl.png');
 const outputPath = path.join(__dirname, '../public/og-image.png');
 
 // Target dimensions for Open Graph images
