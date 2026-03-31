@@ -75,7 +75,7 @@ const Login = () => {
       
       // Check if backend returned a token
       if (!res.data || !res.data.token) {
-        const errorMsg = res.data?.msg || "Google login failed: No token received";
+        const errorMsg = res.data?.error || "Google login failed: No token received";
         console.error("Google login backend error:", errorMsg);
         alert(errorMsg);
         return;
@@ -106,7 +106,7 @@ const Login = () => {
         window.location.href = "/home";
       }
     } catch (error) {
-      let errorMessage = error.response?.data?.msg || error.message || "Google login failed. Please try again.";
+      let errorMessage = error.response?.data?.error || error.message || "Google login failed. Please try again.";
       
       // Enhanced error handling for audience mismatch
       if (errorMessage.includes("Wrong recipient") || errorMessage.includes("audience")) {

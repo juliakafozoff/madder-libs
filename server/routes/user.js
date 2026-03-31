@@ -29,7 +29,7 @@ router.post("/signup", async (req, res) => {
     res.json({ token });
   } catch (error) {
     console.log("Signup error:", error.message);
-    res.json({ msg: "Email already exists" });
+    res.status(409).json({ error: "Email already exists" });
   }
 });
 
@@ -42,20 +42,20 @@ router.post("/login", async (req, res) => {
           const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY);
           return res.json({ token });
         } else {
-          return res.status(400).json({ msg: "Wrong password" });
+          return res.status(401).json({ error: "Wrong password" });
         }
       } else {
         return res.status(400).json({
-          msg: "This email is associated with a gmail account.",
+          error: "This email is associated with a gmail account.",
         });
       }
     } else {
-      return res.status(400).json({
-        msg: "No account found.",
+      return res.status(401).json({
+        error: "No account found.",
       });
     }
   } catch (error) {
-    res.json({ msg: "Email already exists" });
+    res.status(500).json({ error: "Email already exists" });
   }
 });
 
@@ -63,13 +63,13 @@ router.post("/v1/auth/google/:type", async (req, res) => {
   try {
     // Check if Google OAuth is configured
     if (!client || !backendClientId) {
-      return res.status(500).json({ msg: "Google OAuth is not configured" });
+      return res.status(500).json({ error: "Google OAuth is not configured" });
     }
 
     // Check if token is provided
     const { token } = req.body;
     if (!token) {
-      return res.status(400).json({ msg: "ID Token is required" });
+      return res.status(400).json({ error: "ID Token is required" });
     }
 
     // Debug: Decode and log token payload fields (safe) BEFORE verification
@@ -91,7 +91,7 @@ router.post("/v1/auth/google/:type", async (req, res) => {
         const errorMsg = `Google OAuth audience mismatch. Token audience: ${tokenFields.aud}, Expected: ${backendClientId}. Please ensure GOOGLE_CLIENT_ID (backend) matches REACT_APP_GOOGLE_CLIENT_ID (frontend).`;
         console.error("[ERROR]", errorMsg);
         return res.status(400).json({ 
-          msg: errorMsg,
+          error: errorMsg,
           tokenAudience: tokenFields.aud,
           expectedAudience: backendClientId
         });
@@ -133,7 +133,7 @@ router.post("/v1/auth/google/:type", async (req, res) => {
         });
         
         if (!dbUser || !dbUser._id) {
-          return res.status(500).json({ msg: "Failed to create user" });
+          return res.status(500).json({ error: "Failed to create user" });
         }
 
         console.log(`Google signup successful for new user: ${email}`);
@@ -149,7 +149,7 @@ router.post("/v1/auth/google/:type", async (req, res) => {
           }
         }
         console.error("Google signup error:", createError.message);
-        return res.status(500).json({ msg: "Failed to create user account" });
+        return res.status(500).json({ error: "Failed to create user account" });
       }
     }
 
@@ -159,7 +159,7 @@ router.post("/v1/auth/google/:type", async (req, res) => {
       
       if (!dbUser || !dbUser._id) {
         console.log(`Google login failed: No account found for email: ${email}`);
-        return res.status(400).json({ msg: "No account found. Please sign up first." });
+        return res.status(401).json({ error: "No account found. Please sign up first." });
       }
 
       console.log(`Google login successful for: ${email}`);
@@ -168,7 +168,7 @@ router.post("/v1/auth/google/:type", async (req, res) => {
     }
 
     // Invalid type parameter
-    return res.status(400).json({ msg: "Invalid type parameter. Use 'signup' or 'login'" });
+    return res.status(400).json({ error: "Invalid type parameter. Use 'signup' or 'login'" });
   } catch (error) {
     // Handle token verification errors with enhanced messaging
     if (error.message && (error.message.includes("Wrong recipient") || error.message.includes("audience"))) {
@@ -180,7 +180,7 @@ router.post("/v1/auth/google/:type", async (req, res) => {
         error: error.message
       });
       return res.status(400).json({ 
-        msg: errorMsg,
+        error: errorMsg,
         tokenAudience: tokenFields?.aud,
         expectedAudience: backendClientId
       });
@@ -188,14 +188,14 @@ router.post("/v1/auth/google/:type", async (req, res) => {
     
     if (error.message && error.message.includes("Token used too early") || 
         error.message && error.message.includes("Token used too late")) {
-      return res.status(400).json({ msg: "Invalid or expired token" });
+      return res.status(400).json({ error: "Invalid or expired token" });
     }
     if (error.message && error.message.includes("Invalid token signature")) {
-      return res.status(400).json({ msg: "Invalid token signature" });
+      return res.status(400).json({ error: "Invalid token signature" });
     }
     
     console.error("Google OAuth error:", error.message);
-    return res.status(500).json({ msg: error.message || "Internal server error" });
+    return res.status(500).json({ error: error.message || "Internal server error" });
   }
 });
 
@@ -204,10 +204,10 @@ router.get("/get/user/data", authenticate, async (req, res) => {
     const user = await User.findById({ _id: req.userId }).select(
       "-createdAt -updatedAt -password -__v"
     );
-    res.status(200).send({ success: true, user: user });
+    res.status(200).json({ success: true, user: user });
   } catch (err) {
     console.log(err);
-    res.status(401).send({ success: false, message: err.message });
+    res.status(401).json({ success: false, error: err.message });
   }
 });
 
@@ -217,10 +217,10 @@ router.get("/stories", authenticate, async (req, res) => {
       "storiesCreated storiesPlayed",
       ["title", "storyId", "_id"]
     );
-    res.status(200).send({ success: true, user: user });
+    res.status(200).json({ success: true, user: user });
   } catch (error) {
     console.log(error);
-    res.status(401).send({ success: false, message: error.message });
+    res.status(401).json({ success: false, error: error.message });
   }
 });
 

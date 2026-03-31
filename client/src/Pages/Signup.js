@@ -75,7 +75,7 @@ const Signup = () => {
       
       // Check if backend returned a token
       if (!res.data || !res.data.token) {
-        const errorMsg = res.data?.msg || "Google signup failed: No token received";
+        const errorMsg = res.data?.error || "Google signup failed: No token received";
         console.error("Google signup backend error:", errorMsg);
         alert(errorMsg);
         return;
@@ -106,7 +106,7 @@ const Signup = () => {
         window.location.href = "/home";
       }
     } catch (error) {
-      let errorMessage = error.response?.data?.msg || error.message || "Google signup failed. Please try again.";
+      let errorMessage = error.response?.data?.error || error.message || "Google signup failed. Please try again.";
       
       // Enhanced error handling for audience mismatch
       if (errorMessage.includes("Wrong recipient") || errorMessage.includes("audience")) {
@@ -220,7 +220,7 @@ const Signup = () => {
       
       // Check if signup was successful (has token) or if email already exists
       if (!res.data.token) {
-        alert(res.data.msg || "Signup failed. Email may already exist.");
+        alert(res.data.error || "Signup failed. Email may already exist.");
         return;
       }
       
@@ -233,7 +233,7 @@ const Signup = () => {
       await dispatch(authActions.login(res.data.token));
       navigate("/home");
     } catch (error) {
-      const errorMessage = error.response?.data?.msg || error.message || "Signup failed. Please try again.";
+      const errorMessage = error.response?.data?.error || error.message || "Signup failed. Please try again.";
       alert(errorMessage);
       console.error("Signup error:", error);
     }

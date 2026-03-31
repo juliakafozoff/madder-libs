@@ -300,7 +300,7 @@ const OldStories = () => {
       setDeleteModal(null);
     } catch (error) {
       console.error("Error deleting:", error);
-      const errorMessage = error.response?.data?.msg || error.response?.data?.message || error.message || "Failed to delete. Please try again.";
+      const errorMessage = error.response?.data?.error || error.message || "Failed to delete. Please try again.";
       alert(errorMessage);
       // Don't close modal on error so user can try again
     }

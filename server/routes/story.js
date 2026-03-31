@@ -21,7 +21,7 @@ router.post("/create", optionalAuthenticate, async (req, res) => {
   // Check if MongoDB is connected
   if (mongoose.connection.readyState !== 1) {
     console.error("MongoDB not connected. ReadyState:", mongoose.connection.readyState);
-    return res.status(503).json({ msg: 'Database unavailable. Please try again later.' });
+    return res.status(503).json({ error: 'Database unavailable. Please try again later.' });
   }
 
   // Generate unique inviteCode FIRST - we'll use it no matter what
@@ -31,7 +31,7 @@ router.post("/create", optionalAuthenticate, async (req, res) => {
     inviteCode = generateInviteCode();
     attempts++;
     if (attempts > 50) {
-      return res.status(500).json({ msg: 'Failed to generate unique invite code' });
+      return res.status(500).json({ error: 'Failed to generate unique invite code' });
     }
     // Check if code already exists
     const existing = await Story.findOne({ inviteCode });
@@ -123,7 +123,7 @@ router.post("/create", optionalAuthenticate, async (req, res) => {
       code: error.code,
       name: error.name
     });
-    return res.status(500).json({ msg: error.message });
+    return res.status(500).json({ error: error.message });
   }
 });
 
@@ -138,12 +138,12 @@ router.put("/update/:storyId", optionalAuthenticate, async (req, res) => {
     );
     
     if (!story) {
-      return res.status(404).json({ msg: "Story not found" });
+      return res.status(404).json({ error: "Story not found" });
     }
     
     return res.json({ story });
   } catch (error) {
-    res.json({ msg: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -163,12 +163,12 @@ router.get("/get/:id", optionalAuthenticate, async (req, res) => {
     }
     
     if (!story) {
-      return res.status(404).json({ msg: "Story not found" });
+      return res.status(404).json({ error: "Story not found" });
     }
     
     res.json({ story });
   } catch (error) {
-    res.json({ msg: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -186,7 +186,7 @@ router.put("/play/:id", optionalAuthenticate, async (req, res) => {
     }
     
     if (!story) {
-      return res.status(404).json({ msg: "Story not found" });
+      return res.status(404).json({ error: "Story not found" });
     }
     
     // Only track if user is authenticated
@@ -199,7 +199,7 @@ router.put("/play/:id", optionalAuthenticate, async (req, res) => {
     
     res.json({ story });
   } catch (error) {
-    res.json({ msg: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -217,7 +217,7 @@ router.delete("/delete/:id", authenticate, async (req, res) => {
     
     if (!story) {
       console.log("Story not found:", req.params.id);
-      return res.status(404).json({ msg: "Story not found" });
+      return res.status(404).json({ error: "Story not found" });
     }
     
     console.log("Found story:", { storyId: story.storyId, userId: story.user, reqUserId: req.userId });
@@ -225,7 +225,7 @@ router.delete("/delete/:id", authenticate, async (req, res) => {
     // Check if the story belongs to the user
     if (story.user.toString() !== req.userId.toString()) {
       console.log("Unauthorized delete attempt");
-      return res.status(403).json({ msg: "Not authorized to delete this story" });
+      return res.status(403).json({ error: "Not authorized to delete this story" });
     }
     
     // Remove story from user's storiesCreated array
@@ -244,10 +244,10 @@ router.delete("/delete/:id", authenticate, async (req, res) => {
     await Story.findByIdAndDelete(story._id);
     
     console.log("Story deleted successfully");
-    res.json({ success: true, msg: "Story deleted successfully" });
+    res.json({ success: true });
   } catch (error) {
     console.error("Delete story error:", error);
-    res.status(500).json({ msg: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -257,13 +257,13 @@ router.post("/result", optionalAuthenticate, async (req, res) => {
     // Check if MongoDB is connected
     if (mongoose.connection.readyState !== 1) {
       console.error("MongoDB not connected. ReadyState:", mongoose.connection.readyState);
-      return res.status(503).json({ msg: 'Database unavailable. Please try again later.' });
+      return res.status(503).json({ error: 'Database unavailable. Please try again later.' });
     }
 
     const { resultId, templateId, title, resultText } = req.body;
 
     if (!resultId || !templateId || !title || !resultText) {
-      return res.status(400).json({ msg: 'Missing required fields: resultId, templateId, title, resultText' });
+      return res.status(400).json({ error: 'Missing required fields: resultId, templateId, title, resultText' });
     }
 
     // Find the story template to link it
@@ -291,7 +291,7 @@ router.post("/result", optionalAuthenticate, async (req, res) => {
       const existingResult = await StoryResult.findOne({ resultId: req.body.resultId });
       return res.json({ success: true, result: existingResult });
     }
-    res.status(500).json({ msg: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -309,7 +309,7 @@ router.get("/results/:templateId", optionalAuthenticate, async (req, res) => {
     res.json({ success: true, results });
   } catch (error) {
     console.error("Error fetching story results:", error);
-    res.status(500).json({ msg: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -334,7 +334,7 @@ router.get("/my-results", authenticate, async (req, res) => {
     res.json({ success: true, results });
   } catch (error) {
     console.error("Error fetching user's story results:", error);
-    res.status(500).json({ msg: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 

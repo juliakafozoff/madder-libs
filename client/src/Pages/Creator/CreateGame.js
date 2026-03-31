@@ -91,9 +91,9 @@ const CreateGame = () => {
       });
       
       // Check if there's an error message instead of story
-      if (response.data.msg) {
-        console.error("createGame: server returned error message:", response.data.msg);
-        setError(`Couldn't create game: ${response.data.msg}. Please try again.`);
+      if (response.data.error) {
+        console.error("createGame: server returned error message:", response.data.error);
+        setError(`Couldn't create game: ${response.data.error}. Please try again.`);
         return;
       }
       
@@ -166,7 +166,7 @@ const CreateGame = () => {
         setError("Request timed out. Try again.");
       } else if (error.response) {
         // Server responded with error status
-        const errorMsg = error.response.data?.msg || error.response.data?.message || `Server error (${error.response.status})`;
+        const errorMsg = error.response.data?.error || error.response.data?.message || `Server error (${error.response.status})`;
         setError(`Couldn't create game: ${errorMsg}. Please try again.`);
       } else if (error.request) {
         // Request made but no response
