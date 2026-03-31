@@ -213,7 +213,7 @@ const Login = () => {
       dispatch(authActions.login(res.data.token));
       navigate("/home");
     } catch (error) {
-      alert(error.message);
+      alert(error.response?.data?.error || error.message);
     }
   };
   return (
