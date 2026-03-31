@@ -10,6 +10,7 @@ import Button from "../../components/ui/Button";
 import TextInput from "../../components/ui/TextInput";
 import LogoutButton from "../../components/ui/LogoutButton";
 import { autoLogout } from "../../store/actions/auth";
+import { useToast } from "../../components/ui/Toast";
 
 const GameCreator = () => {
   const [ownField, setOwnField] = useState("");
@@ -40,6 +41,7 @@ const GameCreator = () => {
   const [selectedForms, setSelectedForms] = useState({}); // { verb: "past", noun: "plural", adjective: "comparative" } or undefined for default
   const [chipDropdown, setChipDropdown] = useState(null); // { word, position: { top, left } }
   const chipDropdownRef = useRef(null);
+  const toast = useToast();
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -617,6 +619,7 @@ const GameCreator = () => {
         background-color: #0081c9;
         pointer-events: none;
         z-index: 1000;
+        animation: blink 1s infinite;
       `;
       
       // Insert indicator temporarily (will be removed on drop or dragleave)
@@ -1372,7 +1375,7 @@ const GameCreator = () => {
 
   const createStory = async () => {
     if (!titleRef.current.value) {
-      alert("Enter a title");
+      toast.info("Enter a title");
       return;
     }
     const token = localStorage.getItem("userToken");

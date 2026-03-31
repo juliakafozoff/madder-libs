@@ -9,11 +9,13 @@ import Button from "../../components/ui/Button";
 import LogoutButton from "../../components/ui/LogoutButton";
 import { autoLogout } from "../../store/actions/auth";
 import axios from "../../axios";
+import { useToast } from "../../components/ui/Toast";
 
 const CreatedGame = () => {
   const story = useSelector((state) => state.storyData.story);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const { id } = useParams(); // This is the templateId (UUID)
   const [inviteCode, setInviteCode] = useState(null);
@@ -50,7 +52,7 @@ const CreatedGame = () => {
     if (!inviteCode) return;
     const inviteLink = `${window.location.origin}/start/${inviteCode}`;
     copy(inviteLink);
-    alert("Invite link has been copied!");
+    toast.success("Invite link copied!");
   };
 
   const handleLogout = async () => {

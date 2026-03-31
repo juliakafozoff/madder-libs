@@ -9,11 +9,13 @@ import Button from "../components/ui/Button";
 import TextInput from "../components/ui/TextInput";
 import RotatingLogo from "../components/RotatingLogo";
 import { getSafeJwtFields } from "../utils/jwt";
+import { useToast } from "../components/ui/Toast";
 
 const Login = () => {
   const navigate = useNavigate();
   const [type, setType] = useState(true);
   const dispatch = useDispatch();
+  const toast = useToast();
 
   const emailRef = useRef("");
   const passwordRef = useRef("");
@@ -28,7 +30,7 @@ const Login = () => {
     // Check if this is a failure response (no tokenId)
     if (!googleData || !googleData.tokenId) {
       console.error("Google login failed: No tokenId in response", googleData);
-      alert("Google login was cancelled or failed. Please try again.");
+      toast.error("Google login was cancelled or failed. Please try again.");
       return;
     }
     
@@ -50,7 +52,7 @@ const Login = () => {
       if (tokenFields.aud && frontendClientId && tokenFields.aud !== frontendClientId) {
         const errorMsg = `Google OAuth audience mismatch. Token audience: ${tokenFields.aud}, Expected: ${frontendClientId}. Please ensure REACT_APP_GOOGLE_CLIENT_ID matches the Google OAuth client ID used to generate the token.`;
         console.error("[ERROR]", errorMsg);
-        alert(errorMsg);
+        toast.error(errorMsg);
         return;
       }
     } else {
@@ -77,7 +79,7 @@ const Login = () => {
       if (!res.data || !res.data.token) {
         const errorMsg = res.data?.error || "Google login failed: No token received";
         console.error("Google login backend error:", errorMsg);
-        alert(errorMsg);
+        toast.error(errorMsg);
         return;
       }
       
@@ -121,7 +123,7 @@ const Login = () => {
         response: error.response?.data,
         error: error
       });
-      alert(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -133,7 +135,7 @@ const Login = () => {
       handleGoogle({ tokenId: response.credential });
     } else {
       console.error("No credential in response:", response);
-      alert("Google login failed: No credential received");
+      toast.error("Google login failed: No credential received");
     }
   }, [handleGoogle]);
 
@@ -191,7 +193,7 @@ const Login = () => {
 
   const handleLogin = async () => {
     if (!emailRef.current.value || !passwordRef.current.value) {
-      alert("Enter all the details");
+      toast.info("Enter all the details");
       return;
     }
     try {
@@ -213,7 +215,7 @@ const Login = () => {
       dispatch(authActions.login(res.data.token));
       navigate("/home");
     } catch (error) {
-      alert(error.response?.data?.error || error.message);
+      toast.error(error.response?.data?.error || error.message);
     }
   };
   return (

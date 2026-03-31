@@ -8,11 +8,13 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import TextInput from "../components/ui/TextInput";
 import { getSafeJwtFields } from "../utils/jwt";
+import { useToast } from "../components/ui/Toast";
 
 const Signup = () => {
   const navigate = useNavigate();
   const [type, setType] = useState(true);
   const dispatch = useDispatch();
+  const toast = useToast();
 
   const nameRef = useRef("");
   const emailRef = useRef("");
@@ -28,7 +30,7 @@ const Signup = () => {
     // Check if this is a failure response (no tokenId)
     if (!googleData || !googleData.tokenId) {
       console.error("Google signup failed: No tokenId in response", googleData);
-      alert("Google signup was cancelled or failed. Please try again.");
+      toast.error("Google signup was cancelled or failed. Please try again.");
       return;
     }
     
@@ -50,7 +52,7 @@ const Signup = () => {
       if (tokenFields.aud && frontendClientId && tokenFields.aud !== frontendClientId) {
         const errorMsg = `Google OAuth audience mismatch. Token audience: ${tokenFields.aud}, Expected: ${frontendClientId}. Please ensure REACT_APP_GOOGLE_CLIENT_ID matches the Google OAuth client ID used to generate the token.`;
         console.error("[ERROR]", errorMsg);
-        alert(errorMsg);
+        toast.error(errorMsg);
         return;
       }
     } else {
@@ -77,7 +79,7 @@ const Signup = () => {
       if (!res.data || !res.data.token) {
         const errorMsg = res.data?.error || "Google signup failed: No token received";
         console.error("Google signup backend error:", errorMsg);
-        alert(errorMsg);
+        toast.error(errorMsg);
         return;
       }
       
@@ -121,7 +123,7 @@ const Signup = () => {
         response: error.response?.data,
         error: error
       });
-      alert(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -133,7 +135,7 @@ const Signup = () => {
       handleGoogle({ tokenId: response.credential });
     } else {
       console.error("No credential in response:", response);
-      alert("Google signup failed: No credential received");
+      toast.error("Google signup failed: No credential received");
     }
   }, [handleGoogle]);
 
@@ -196,7 +198,7 @@ const Signup = () => {
       !emailRef.current.value ||
       !passwordRef.current.value
     ) {
-      alert("Enter all the details");
+      toast.info("Enter all the details");
       return;
     }
     try {
@@ -220,7 +222,7 @@ const Signup = () => {
       
       // Check if signup was successful (has token) or if email already exists
       if (!res.data.token) {
-        alert(res.data.error || "Signup failed. Email may already exist.");
+        toast.error(res.data.error || "Signup failed. Email may already exist.");
         return;
       }
       
@@ -234,7 +236,7 @@ const Signup = () => {
       navigate("/home");
     } catch (error) {
       const errorMessage = error.response?.data?.error || error.message || "Signup failed. Please try again.";
-      alert(errorMessage);
+      toast.error(errorMessage);
       console.error("Signup error:", error);
     }
   };

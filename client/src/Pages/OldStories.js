@@ -8,6 +8,7 @@ import LogoutButton from "../components/ui/LogoutButton";
 import { useDispatch } from "react-redux";
 import { autoLogout } from "../store/actions/auth";
 import axios from "../axios";
+import { useToast } from "../components/ui/Toast";
 
 const OldStories = () => {
   const [activeTab, setActiveTab] = useState("templates"); // "templates" or "results"
@@ -17,6 +18,7 @@ const OldStories = () => {
   const [deleteModal, setDeleteModal] = useState(null); // { type: 'template'|'result', id: string, title: string }
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const toast = useToast();
 
   useEffect(() => {
     // Load templates from API
@@ -158,10 +160,10 @@ const OldStories = () => {
     e.preventDefault();
     e.stopPropagation(); // Prevent row click
     navigator.clipboard.writeText(code).then(() => {
-      alert("Copied!");
+      toast.success("Copied!");
     }).catch((err) => {
       console.error("Failed to copy:", err);
-      alert("Failed to copy code");
+      toast.error("Failed to copy code");
     });
   };
 
@@ -301,7 +303,7 @@ const OldStories = () => {
     } catch (error) {
       console.error("Error deleting:", error);
       const errorMessage = error.response?.data?.error || error.message || "Failed to delete. Please try again.";
-      alert(errorMessage);
+      toast.error(errorMessage);
       // Don't close modal on error so user can try again
     }
   };
