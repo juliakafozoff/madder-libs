@@ -20,95 +20,52 @@ const Signup = () => {
   const emailRef = useRef("");
   const passwordRef = useRef("");
 
-  const handleGoogle = async (googleData) => {
+  const handleGoogle = useCallback(async (googleData) => {
     const frontendClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
-    // Check if this is a failure response (no tokenId)
     if (!googleData || !googleData.tokenId) {
-      console.error("Google signup failed: No tokenId in response", googleData);
       toast.error("Google signup was cancelled or failed. Please try again.");
       return;
     }
-    
+
     const tokenFields = getSafeJwtFields(googleData.tokenId);
-    if (tokenFields) {
-      // Check for audience mismatch
-      if (tokenFields.aud && frontendClientId && tokenFields.aud !== frontendClientId) {
-        const errorMsg = `Google OAuth audience mismatch. Token audience: ${tokenFields.aud}, Expected: ${frontendClientId}. Please ensure REACT_APP_GOOGLE_CLIENT_ID matches the Google OAuth client ID used to generate the token.`;
-        console.error("[ERROR]", errorMsg);
-        toast.error(errorMsg);
-        return;
-      }
+    if (tokenFields && tokenFields.aud && frontendClientId && tokenFields.aud !== frontendClientId) {
+      toast.error("Google signup configuration error. Please contact support.");
+      return;
     }
 
     try {
       const res = await axios.post(
         "/user/v1/auth/google/signup",
-        {
-          token: googleData.tokenId,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+        { token: googleData.tokenId },
+        { headers: { "Content-Type": "application/json" } }
       );
-      
-      // Check if backend returned a token
+
       if (!res.data || !res.data.token) {
-        const errorMsg = res.data?.error || "Google signup failed: No token received";
-        console.error("Google signup backend error:", errorMsg);
-        toast.error(errorMsg);
+        toast.error(res.data?.error || "Google signup failed. Please try again.");
         return;
       }
-      
-      // Store JWT token in localStorage
+
       const jwtToken = res.data.token;
-      localStorage.setItem("token", jwtToken);
-      localStorage.setItem("userToken", jwtToken); // Also store as userToken for compatibility
-      
-      // Navigate directly - PrivateRoute will handle fetching user data
-      try {
-        navigate("/home", { replace: true });
-        // Fallback to window.location if navigate doesn't work
-        setTimeout(() => {
-          if (window.location.pathname !== "/home") {
-            window.location.href = "/home";
-          }
-        }, 100);
-      } catch (navError) {
-        console.error("Navigation error:", navError);
-        window.location.href = "/home";
-      }
+      localStorage.setItem("userToken", jwtToken);
+      await dispatch(authActions.login(jwtToken));
+      navigate("/home", { replace: true });
     } catch (error) {
       let errorMessage = error.response?.data?.error || error.message || "Google signup failed. Please try again.";
-      
-      // Enhanced error handling for audience mismatch
       if (errorMessage.includes("Wrong recipient") || errorMessage.includes("audience")) {
-        const tokenFields = getSafeJwtFields(googleData.tokenId);
-        if (tokenFields) {
-          errorMessage = `Google OAuth audience mismatch. Token audience: ${tokenFields.aud}, Backend expected: ${frontendClientId}. Please ensure REACT_APP_GOOGLE_CLIENT_ID (frontend) matches GOOGLE_CLIENT_ID (backend).`;
-        }
+        errorMessage = "Google signup configuration error. Please contact support.";
       }
-      
-      console.error("Google signup error:", {
-        message: errorMessage,
-        response: error.response?.data,
-        error: error
-      });
       toast.error(errorMessage);
     }
-  };
+  }, [dispatch, navigate, toast]);
 
   const handleGoogleCredential = useCallback((response) => {
     if (response.credential) {
-      // response.credential is the ID token (JWT)
       handleGoogle({ tokenId: response.credential });
     } else {
-      console.error("No credential in response:", response);
-      toast.error("Google signup failed: No credential received");
+      toast.error("Google signup failed. Please try again.");
     }
-  }, [handleGoogle]);
+  }, [handleGoogle, toast]);
 
   // Initialize Google Sign In button
   useEffect(() => {
