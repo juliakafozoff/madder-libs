@@ -1,7 +1,8 @@
-import { SET_USER, LOGOUT } from "../actions/auth";
+import { SET_USER, LOGOUT, LOGIN_FAILED } from "../actions/auth";
 
 const initialState = {
   user: null,
+  loginFailed: false,
 };
 
 const userReducer = (state = initialState, action) => {
@@ -9,13 +10,19 @@ const userReducer = (state = initialState, action) => {
     case SET_USER:
       return {
         user: action.user,
+        loginFailed: false,
       };
     case LOGOUT:
       return {
         user: null,
+        loginFailed: false,
+      };
+    case LOGIN_FAILED:
+      return {
+        ...state,
+        loginFailed: true,
       };
     default:
-      //default case will be reached when the app starts and redux store is initialized.
       return state;
   }
 };

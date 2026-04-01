@@ -78,7 +78,18 @@ router.post("/login", loginLimiter, async (req, res) => {
     const user = await User.findOne({ email: req.body.email });
     if (user) {
       if (user.type === "email") {
-        const isMatch = await bcrypt.compare(req.body.password, user.password);
+        const storedPassword = user.password;
+        const isBcryptHash = storedPassword && storedPassword.startsWith("$2");
+
+        let isMatch = false;
+        if (isBcryptHash) {
+          isMatch = await bcrypt.compare(req.body.password, storedPassword);
+        } else if (storedPassword === req.body.password) {
+          isMatch = true;
+          const hashed = await bcrypt.hash(req.body.password, BCRYPT_SALT_ROUNDS);
+          await User.updateOne({ _id: user._id }, { password: hashed });
+        }
+
         if (isMatch) {
           const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY);
           return res.json({ token });
