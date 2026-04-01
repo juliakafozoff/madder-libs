@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../axios";
 import { useDispatch } from "react-redux";
@@ -8,19 +8,19 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import TextInput from "../components/ui/TextInput";
 import RotatingLogo from "../components/RotatingLogo";
-import { useToast } from "../components/ui/Toast";
 
 const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const toast = useToast();
 
   const emailRef = useRef("");
   const passwordRef = useRef("");
+  const [error, setError] = useState("");
 
   const handleLogin = async () => {
+    setError("");
     if (!emailRef.current.value || !passwordRef.current.value) {
-      toast.info("Enter all the details");
+      setError("Please enter your email and password.");
       return;
     }
     try {
@@ -42,7 +42,7 @@ const Login = () => {
       await dispatch(authActions.login(res.data.token));
       navigate("/home");
     } catch (error) {
-      toast.error(error.response?.data?.error || error.message);
+      setError(error.response?.data?.error || error.message);
     }
   };
 
@@ -61,6 +61,7 @@ const Login = () => {
           placeholder="Email"
           label="Email"
           required
+          onChange={() => setError("")}
         />
         <TextInput
           inputRef={passwordRef}
@@ -68,7 +69,9 @@ const Login = () => {
           placeholder="Password"
           label="Password"
           required
+          onChange={() => setError("")}
         />
+        {error && <p style={{ color: '#ef4444', textAlign: 'center', marginTop: '8px', fontSize: '14px' }}>{error}</p>}
         <Button onClick={handleLogin}>
           Login
         </Button>

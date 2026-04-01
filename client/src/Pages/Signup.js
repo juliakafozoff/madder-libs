@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../axios";
 import { useDispatch } from "react-redux";
@@ -17,23 +17,34 @@ const Signup = () => {
   const nameRef = useRef("");
   const emailRef = useRef("");
   const passwordRef = useRef("");
+  const [error, setError] = useState("");
 
   const handleSignUp = async () => {
-    if (
-      !nameRef.current.value ||
-      !emailRef.current.value ||
-      !passwordRef.current.value
-    ) {
-      toast.info("Enter all the details");
+    setError("");
+    const name = nameRef.current.value.trim();
+    const email = emailRef.current.value.trim();
+    const password = passwordRef.current.value;
+
+    if (!name) {
+      setError("Name is required.");
       return;
     }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (!password || password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
     try {
       const res = await axios.post(
         "/user/signup",
         {
-          name: nameRef.current.value,
-          email: emailRef.current.value,
-          password: passwordRef.current.value,
+          name,
+          email,
+          password,
           type: "email",
         },
         {
@@ -44,7 +55,7 @@ const Signup = () => {
       );
 
       if (!res.data.token) {
-        toast.error(res.data.error || "Signup failed. Email may already exist.");
+        setError(res.data.error || "Signup failed. Email may already exist.");
         return;
       }
 
@@ -56,7 +67,7 @@ const Signup = () => {
       navigate("/home");
     } catch (error) {
       const errorMessage = error.response?.data?.error || error.message || "Signup failed. Please try again.";
-      toast.error(errorMessage);
+      setError(errorMessage);
     }
   };
 
@@ -70,6 +81,7 @@ const Signup = () => {
           placeholder="Name"
           label="Name"
           required
+          onChange={() => setError("")}
         />
         <TextInput
           inputRef={emailRef}
@@ -77,6 +89,7 @@ const Signup = () => {
           placeholder="Email"
           label="Email"
           required
+          onChange={() => setError("")}
         />
         <TextInput
           inputRef={passwordRef}
@@ -84,7 +97,9 @@ const Signup = () => {
           placeholder="Password"
           label="Password"
           required
+          onChange={() => setError("")}
         />
+        {error && <p style={{ color: '#ef4444', textAlign: 'center', marginTop: '8px', fontSize: '14px' }}>{error}</p>}
         <Button onClick={handleSignUp}>
           Register
         </Button>
