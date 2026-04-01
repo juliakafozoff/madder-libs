@@ -36,8 +36,8 @@ const googleAuthLimiter = rateLimit({
 });
 
 // Only create OAuth2Client if GOOGLE_CLIENT_ID is configured
-const backendClientId = process.env.GOOGLE_CLIENT_ID;
-const client = backendClientId 
+const backendClientId = (process.env.GOOGLE_CLIENT_ID || "").trim();
+const client = backendClientId
   ? new OAuth2Client(backendClientId)
   : null;
 
@@ -113,21 +113,7 @@ router.post("/v1/auth/google/:type", googleAuthLimiter, async (req, res) => {
       return res.status(400).json({ error: "ID Token is required" });
     }
 
-    // Check for audience mismatch before verification
-    const tokenFields = getSafeJwtFields(token);
-    if (tokenFields) {
-      if (tokenFields.aud && backendClientId && tokenFields.aud !== backendClientId) {
-        const errorMsg = `Google OAuth audience mismatch. Token audience: ${tokenFields.aud}, Expected: ${backendClientId}. Please ensure GOOGLE_CLIENT_ID (backend) matches REACT_APP_GOOGLE_CLIENT_ID (frontend).`;
-        console.error("[ERROR]", errorMsg);
-        return res.status(400).json({
-          error: errorMsg,
-          tokenAudience: tokenFields.aud,
-          expectedAudience: backendClientId
-        });
-      }
-    }
-
-    // Verify the ID token
+    // Verify the ID token (this also validates audience)
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: backendClientId,
@@ -190,32 +176,19 @@ router.post("/v1/auth/google/:type", googleAuthLimiter, async (req, res) => {
     // Invalid type parameter
     return res.status(400).json({ error: "Invalid type parameter. Use 'signup' or 'login'" });
   } catch (error) {
-    // Handle token verification errors with enhanced messaging
+    console.error("Google OAuth error:", error.message);
+
     if (error.message && (error.message.includes("Wrong recipient") || error.message.includes("audience"))) {
-      const tokenFields = getSafeJwtFields(req.body.token);
-      let errorMsg = `Google OAuth audience mismatch. Token audience: ${tokenFields?.aud || 'unknown'}, Expected: ${backendClientId}. Please ensure GOOGLE_CLIENT_ID (backend) matches REACT_APP_GOOGLE_CLIENT_ID (frontend).`;
-      console.error("[ERROR] Audience mismatch:", {
-        tokenAudience: tokenFields?.aud,
-        expectedAudience: backendClientId,
-        error: error.message
-      });
-      return res.status(400).json({ 
-        error: errorMsg,
-        tokenAudience: tokenFields?.aud,
-        expectedAudience: backendClientId
-      });
+      return res.status(400).json({ error: "Google login failed. Please try again." });
     }
-    
-    if (error.message && error.message.includes("Token used too early") || 
-        error.message && error.message.includes("Token used too late")) {
-      return res.status(400).json({ error: "Invalid or expired token" });
+    if (error.message && (error.message.includes("Token used too early") || error.message.includes("Token used too late"))) {
+      return res.status(400).json({ error: "Login expired. Please try again." });
     }
     if (error.message && error.message.includes("Invalid token signature")) {
-      return res.status(400).json({ error: "Invalid token signature" });
+      return res.status(400).json({ error: "Google login failed. Please try again." });
     }
-    
-    console.error("Google OAuth error:", error.message);
-    return res.status(500).json({ error: error.message || "Internal server error" });
+
+    return res.status(500).json({ error: "Something went wrong. Please try again." });
   }
 });
 
