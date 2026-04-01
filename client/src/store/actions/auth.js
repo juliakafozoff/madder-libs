@@ -19,9 +19,11 @@ export const login = (token) => {
           authorization: token,
         },
       });
-      dispatch(setUser(await res.data.user));
+      dispatch(setUser(res.data.user));
     } catch (err) {
-      dispatch(autoLogout());
+      if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+        dispatch(autoLogout());
+      }
     }
   };
 };
