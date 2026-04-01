@@ -12,6 +12,7 @@ import TextInput from "../../components/ui/TextInput";
 const PlayGame = () => {
   const storyData = useSelector((state) => state.storyData.story);
   const [story, setStory] = useState(storyData?.story);
+  const [error, setError] = useState(null);
 
   const [gameContest, setGameContest] = useState([]);
 
@@ -27,45 +28,75 @@ const PlayGame = () => {
   }
 
   useEffect(() => {
-    setGameContest(
-      story
-        .map((word, index) => {
-          return typeof word === "object" ? { ...word, index } : "";
-        })
-        .filter((word, index) => {
-          return typeof word === "object";
-        })
-    );
+    try {
+      setGameContest(
+        story
+          .map((word, index) => {
+            return typeof word === "object" ? { ...word, index } : "";
+          })
+          .filter((word, index) => {
+            return typeof word === "object";
+          })
+      );
+    } catch (err) {
+      setError("Something went wrong loading the game. Please try again.");
+    }
   }, []);
 
   const moveNextWord = (wordIndex) => {
-    console.log(wordIndex);
-    setStory((prev) => {
-      return prev.map((word, index) => {
-        return index === wordIndex ? { ...word, result: wordInput } : word;
+    try {
+      console.log(wordIndex);
+      setStory((prev) => {
+        return prev.map((word, index) => {
+          return index === wordIndex ? { ...word, result: wordInput } : word;
+        });
       });
-    });
-    setWordInput("");
-    setNextWord((prev) => prev + 1);
+      setWordInput("");
+      setNextWord((prev) => prev + 1);
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+    }
   };
 
   const seeResult = (wordIndex) => {
-    let resultStry = [];
-    resultStry = story.map((word, index) => {
-      return index === wordIndex ? { ...word, result: wordInput } : word;
-    });
-    setStory((prev) => {
-      return prev.map((word, index) => {
+    try {
+      let resultStry = [];
+      resultStry = story.map((word, index) => {
         return index === wordIndex ? { ...word, result: wordInput } : word;
       });
-    });
-    setWordInput("");
-    console.log(resultStry);
-    console.log(story);
-    dispatch(setResultStory(resultStry));
-    navigate("/result");
+      setStory((prev) => {
+        return prev.map((word, index) => {
+          return index === wordIndex ? { ...word, result: wordInput } : word;
+        });
+      });
+      setWordInput("");
+      console.log(resultStry);
+      console.log(story);
+      dispatch(setResultStory(resultStry));
+      navigate("/result");
+    } catch (err) {
+      setError("Something went wrong showing your result. Please try again.");
+    }
   };
   // setWordIndex(game.index);
+
+  if (error) {
+    return (
+      <PageShell>
+        <Card>
+          <div className="flex flex-col items-center gap-4 py-8">
+            <p className="text-base text-gray-700 text-center">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+            >
+              Try again
+            </button>
+          </div>
+        </Card>
+      </PageShell>
+    );
+  }
 
   if (!story) {
     return (

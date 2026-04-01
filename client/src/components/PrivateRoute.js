@@ -31,7 +31,7 @@ const PrivateRoute = () => {
   }
   return (
     <div className="flex justify-center items-center min-h-screen">
-      <div class="loader"></div>
+      <div className="loader"></div>
     </div>
   );
 };

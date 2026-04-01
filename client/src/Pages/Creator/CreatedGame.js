@@ -19,6 +19,7 @@ const CreatedGame = () => {
 
   const { id } = useParams(); // This is the templateId (UUID)
   const [inviteCode, setInviteCode] = useState(null);
+  const [error, setError] = useState(null);
 
   // Fetch story to get inviteCode from backend
   useEffect(() => {
@@ -41,8 +42,9 @@ const CreatedGame = () => {
         if (response.data.story && response.data.story.inviteCode) {
           setInviteCode(response.data.story.inviteCode);
         }
-      } catch (error) {
-        console.error("Error fetching story:", error);
+      } catch (err) {
+        console.error("Error fetching story:", err);
+        setError("Failed to load the game. Please check your connection and try again.");
       }
     };
     fetchStory();
@@ -70,7 +72,17 @@ const CreatedGame = () => {
         <p className="ui-text ui-text--secondary" style={{ textAlign: 'center' }}>
           Invite a friend to play
         </p>
-        {inviteCode ? (
+        {error ? (
+          <div className="flex flex-col items-center gap-4 py-4">
+            <p className="text-base text-gray-700 text-center">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+            >
+              Try again
+            </button>
+          </div>
+        ) : inviteCode ? (
           <>
             <div style={{
               display: 'flex',

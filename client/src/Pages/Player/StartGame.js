@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowNarrowRightIcon } from "@heroicons/react/outline";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
@@ -15,24 +15,28 @@ const StartGame = () => {
   const dispatch = useDispatch();
   const { id } = useParams();
   const story = useSelector((state) => state.storyData.story);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchStory = async () => {
-      const token = localStorage.getItem("userToken");
-      const headers = {
-        "Content-Type": "application/json",
-      };
-      
-      // Only include authorization header if token exists
-      if (token) {
-        headers.authorization = token;
+      try {
+        const token = localStorage.getItem("userToken");
+        const headers = {
+          "Content-Type": "application/json",
+        };
+        
+        if (token) {
+          headers.authorization = token;
+        }
+        
+        const response = await axios.get(`/story/get/${id}`, {
+          headers,
+        });
+        dispatch(setStory(response.data.story));
+      } catch (err) {
+        console.error("Failed to fetch story:", err);
+        setError("Failed to load the story. Please check your connection and try again.");
       }
-      
-      // The backend /story/get/:id now handles both inviteCode and storyId
-      const response = await axios.get(`/story/get/${id}`, {
-        headers,
-      });
-      dispatch(setStory(response.data.story));
     };
     fetchStory();
   }, [id, dispatch]);
@@ -45,6 +49,24 @@ const StartGame = () => {
     await dispatch(autoLogout());
     navigate("/login");
   };
+
+  if (error) {
+    return (
+      <PageShell>
+        <Card>
+          <div className="flex flex-col items-center gap-4 py-8">
+            <p className="text-base text-gray-700 text-center">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+            >
+              Try again
+            </button>
+          </div>
+        </Card>
+      </PageShell>
+    );
+  }
 
   if (!story) {
     return (

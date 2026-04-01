@@ -12,6 +12,7 @@ const GameResult = () => {
   const storyData = useSelector((state) => state.storyData);
   const navigate = useNavigate();
   const [savedToBackend, setSavedToBackend] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   // Save completed story to backend and localStorage
   useEffect(() => {
@@ -100,8 +101,8 @@ const GameResult = () => {
             console.log("⚠️ Story already exists in localStorage, skipping save");
           }
         } catch (error) {
-          console.error("❌ Error saving completed story:", error);
-          console.error("Error details:", error.stack);
+          console.error("Failed to save completed story:", error);
+          setSaveError(true);
         }
       };
 
