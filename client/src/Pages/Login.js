@@ -8,7 +8,6 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import TextInput from "../components/ui/TextInput";
 import RotatingLogo from "../components/RotatingLogo";
-import { getSafeJwtFields } from "../utils/jwt";
 import { useToast } from "../components/ui/Toast";
 
 const Login = () => {
@@ -21,16 +20,8 @@ const Login = () => {
   const passwordRef = useRef("");
 
   const handleGoogle = useCallback(async (googleData) => {
-    const frontendClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-
     if (!googleData || !googleData.tokenId) {
       toast.error("Google login was cancelled or failed. Please try again.");
-      return;
-    }
-
-    const tokenFields = getSafeJwtFields(googleData.tokenId);
-    if (tokenFields && tokenFields.aud && frontendClientId && tokenFields.aud !== frontendClientId) {
-      toast.error("Google login configuration error. Please contact support.");
       return;
     }
 

@@ -7,7 +7,6 @@ import PageShell from "../components/ui/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import TextInput from "../components/ui/TextInput";
-import { getSafeJwtFields } from "../utils/jwt";
 import { useToast } from "../components/ui/Toast";
 
 const Signup = () => {
@@ -21,16 +20,8 @@ const Signup = () => {
   const passwordRef = useRef("");
 
   const handleGoogle = useCallback(async (googleData) => {
-    const frontendClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-
     if (!googleData || !googleData.tokenId) {
       toast.error("Google signup was cancelled or failed. Please try again.");
-      return;
-    }
-
-    const tokenFields = getSafeJwtFields(googleData.tokenId);
-    if (tokenFields && tokenFields.aud && frontendClientId && tokenFields.aud !== frontendClientId) {
-      toast.error("Google signup configuration error. Please contact support.");
       return;
     }
 

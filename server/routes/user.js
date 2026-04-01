@@ -161,12 +161,21 @@ router.post("/v1/auth/google/:type", googleAuthLimiter, async (req, res) => {
       }
     }
 
-    // Handle login flow
+    // Handle login flow — auto-create account if user doesn't exist
     if (req.params.type === "login") {
-      const dbUser = await User.findOne({ email });
-      
-      if (!dbUser || !dbUser._id) {
-        return res.status(401).json({ error: "No account found. Please sign up first." });
+      let dbUser = await User.findOne({ email });
+
+      if (!dbUser) {
+        try {
+          dbUser = await User.create({ email, name, type: "gmail" });
+        } catch (createError) {
+          if (createError.code === 11000) {
+            dbUser = await User.findOne({ email });
+          }
+          if (!dbUser) {
+            return res.status(500).json({ error: "Failed to create user account" });
+          }
+        }
       }
 
       const jwtToken = jwt.sign({ id: dbUser._id }, process.env.SECRET_KEY);
