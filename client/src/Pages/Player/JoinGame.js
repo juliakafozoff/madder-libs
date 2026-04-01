@@ -144,14 +144,14 @@ const JoinGame = () => {
           }}>
             Paste a link or enter a 6-character code
           </p>
-        ) : gameCode.length > 0 && gameCode.length !== 6 && !gameCode.includes('/') ? (
+        ) : gameCode.length > 0 && !gameCode.includes('/') && !/^[A-Z0-9]{6}$/.test(gameCode) ? (
           <p style={{
             fontSize: '13px',
             color: '#d97706',
             marginTop: '-8px',
             marginBottom: '0'
           }}>
-            Codes are 6 characters ({gameCode.length}/6)
+            Codes are 6 letters/numbers{gameCode.length !== 6 ? ` (${gameCode.length}/6)` : ''}
           </p>
         ) : null}
         <Button onClick={joinGame} disabled={!gameCode.trim()}>

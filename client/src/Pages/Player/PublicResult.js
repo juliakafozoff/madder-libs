@@ -13,6 +13,7 @@ const PublicResult = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
 
   useEffect(() => {
     const fetchResult = async () => {
@@ -47,9 +48,12 @@ const PublicResult = () => {
   const handleShare = async () => {
     if (navigator.share) {
       try {
+        const teaser = result?.resultText && result.resultText.length > 100
+          ? result.resultText.slice(0, 100) + "…"
+          : (result?.resultText || "Check out this Glad Libs story!");
         await navigator.share({
           title: result?.title ? `"${result.title}" — Glad Libs` : "A Glad Libs story",
-          text: "Check out this Glad Libs story!",
+          text: teaser,
           url: shareUrl,
         });
       } catch (err) {
@@ -150,6 +154,21 @@ const PublicResult = () => {
             }}
           >
             {copied ? "Copied!" : "Copy link"}
+          </Button>
+          <Button
+            onClick={() => {
+              copy(result?.resultText || "");
+              setCopiedText(true);
+              setTimeout(() => setCopiedText(false), 2000);
+            }}
+            style={{
+              maxWidth: "160px",
+              backgroundColor: "transparent",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border-color)",
+            }}
+          >
+            {copiedText ? "Copied!" : "Copy story"}
           </Button>
         </div>
         <div

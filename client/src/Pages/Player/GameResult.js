@@ -16,6 +16,7 @@ const GameResult = () => {
   const [saveError, setSaveError] = useState(false);
   const [currentResultId, setCurrentResultId] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
 
   // Save completed story to backend and localStorage
   useEffect(() => {
@@ -150,9 +151,14 @@ const GameResult = () => {
                 const url = `${window.location.origin}/result/${currentResultId}`;
                 if (navigator.share) {
                   try {
+                    const resultText = storyData.resultStory
+                      .map((w) => (typeof w === "object" && w.result ? w.result : w))
+                      .join(" ")
+                      .trim();
+                    const teaser = resultText.length > 100 ? resultText.slice(0, 100) + "…" : resultText;
                     await navigator.share({
                       title: `"${storyData.story?.title}" — Glad Libs`,
-                      text: 'Check out this Glad Libs story!',
+                      text: teaser,
                       url,
                     });
                   } catch (err) {
@@ -186,6 +192,25 @@ const GameResult = () => {
               }}
             >
               {copied ? 'Copied!' : 'Copy link'}
+            </Button>
+            <Button
+              onClick={() => {
+                const text = storyData.resultStory
+                  .map((w) => (typeof w === "object" && w.result ? w.result : w))
+                  .join(" ")
+                  .trim();
+                copy(text);
+                setCopiedText(true);
+                setTimeout(() => setCopiedText(false), 2000);
+              }}
+              style={{
+                maxWidth: '160px',
+                backgroundColor: 'transparent',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)'
+              }}
+            >
+              {copiedText ? 'Copied!' : 'Copy story'}
             </Button>
           </div>
         )}

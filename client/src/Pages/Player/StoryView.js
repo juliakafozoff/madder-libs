@@ -14,6 +14,7 @@ const StoryView = () => {
   const dispatch = useDispatch();
   const [story, setStory] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
 
   useEffect(() => {
     // Load the specific story from localStorage
@@ -97,9 +98,12 @@ const StoryView = () => {
               const url = `${window.location.origin}/result/${resultId}`;
               if (navigator.share) {
                 try {
+                  const teaser = story.resultText && story.resultText.length > 100
+                    ? story.resultText.slice(0, 100) + "…"
+                    : (story.resultText || "Check out this Glad Libs story!");
                   await navigator.share({
                     title: `"${story.title}" — Glad Libs`,
-                    text: 'Check out this Glad Libs story!',
+                    text: teaser,
                     url,
                   });
                 } catch (err) {
@@ -133,6 +137,21 @@ const StoryView = () => {
             }}
           >
             {copied ? 'Copied!' : 'Copy link'}
+          </Button>
+          <Button
+            onClick={() => {
+              copy(story.resultText || "");
+              setCopiedText(true);
+              setTimeout(() => setCopiedText(false), 2000);
+            }}
+            style={{
+              maxWidth: '160px',
+              backgroundColor: 'transparent',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-color)'
+            }}
+          >
+            {copiedText ? 'Copied!' : 'Copy story'}
           </Button>
         </div>
         <div style={{
