@@ -162,6 +162,11 @@ const GameResult = () => {
         <h3 className="ui-heading ui-heading--small" style={{ marginTop: 'var(--spacing-lg)' }}>
           The End!
         </h3>
+        {saveError && (
+          <p style={{ color: 'var(--color-error, #ef4444)', fontSize: '14px', marginTop: 'var(--spacing-md)' }}>
+            Your story was saved locally but couldn't sync to the server. It'll try again next time.
+          </p>
+        )}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--spacing-lg)' }}>
           <Button onClick={() => navigate("/home")} style={{ maxWidth: '200px' }}>
             Go to Home
