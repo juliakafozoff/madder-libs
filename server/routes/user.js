@@ -2,9 +2,38 @@ require("dotenv").config();
 const router = require("express").Router();
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 const { OAuth2Client } = require("google-auth-library");
 const authenticate = require("../middlewares/authenticate");
 const { getSafeJwtFields } = require("../utils/jwt");
+
+const rateLimit = require("express-rate-limit");
+
+const BCRYPT_SALT_ROUNDS = 10;
+
+const signupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Too many signup attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many login attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const googleAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many login attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Only create OAuth2Client if GOOGLE_CLIENT_ID is configured
 const backendClientId = process.env.GOOGLE_CLIENT_ID;
@@ -12,33 +41,45 @@ const client = backendClientId
   ? new OAuth2Client(backendClientId)
   : null;
 
-// Debug: Log backend Google Client ID on startup
-if (backendClientId) {
-  console.log("[DEBUG] Backend Google Client ID:", `${backendClientId.substring(0, 20)}...`);
-} else {
-  console.warn("[DEBUG] Backend Google Client ID: NOT SET");
-}
-
-router.post("/signup", async (req, res) => {
-  console.log("POST /user/signup - Request received");
-  console.log("Request body:", { name: req.body.name, email: req.body.email, type: req.body.type });
+router.post("/signup", signupLimiter, async (req, res) => {
   try {
-    const user = await User.create(req.body);
+    const { name, email, password, type } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: "Name is required" });
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "A valid email is required" });
+    }
+    if (type === "email") {
+      if (!password || password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+    }
+
+    const hashedPassword = type === "email" && password
+      ? await bcrypt.hash(password, BCRYPT_SALT_ROUNDS)
+      : undefined;
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      type,
+    });
     const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY);
-    console.log("Signup successful for user:", user.email);
     res.json({ token });
   } catch (error) {
-    console.log("Signup error:", error.message);
     res.status(409).json({ error: "Email already exists" });
   }
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
     if (user) {
       if (user.type === "email") {
-        if (user.password === req.body.password) {
+        const isMatch = await bcrypt.compare(req.body.password, user.password);
+        if (isMatch) {
           const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY);
           return res.json({ token });
         } else {
@@ -55,11 +96,11 @@ router.post("/login", async (req, res) => {
       });
     }
   } catch (error) {
-    res.status(500).json({ error: "Email already exists" });
+    res.status(500).json({ error: "Something went wrong. Please try again." });
   }
 });
 
-router.post("/v1/auth/google/:type", async (req, res) => {
+router.post("/v1/auth/google/:type", googleAuthLimiter, async (req, res) => {
   try {
     // Check if Google OAuth is configured
     if (!client || !backendClientId) {
@@ -72,32 +113,18 @@ router.post("/v1/auth/google/:type", async (req, res) => {
       return res.status(400).json({ error: "ID Token is required" });
     }
 
-    // Debug: Decode and log token payload fields (safe) BEFORE verification
+    // Check for audience mismatch before verification
     const tokenFields = getSafeJwtFields(token);
     if (tokenFields) {
-      console.log("[DEBUG] Google ID Token payload fields:", {
-        aud: tokenFields.aud,
-        iss: tokenFields.iss,
-        azp: tokenFields.azp,
-        exp: tokenFields.exp,
-        email: tokenFields.email,
-        tokenType: "id_token"
-      });
-      console.log("[DEBUG] Token audience (aud):", tokenFields.aud);
-      console.log("[DEBUG] Expected audience (backend client ID):", backendClientId);
-      
-      // Check for audience mismatch before verification
       if (tokenFields.aud && backendClientId && tokenFields.aud !== backendClientId) {
         const errorMsg = `Google OAuth audience mismatch. Token audience: ${tokenFields.aud}, Expected: ${backendClientId}. Please ensure GOOGLE_CLIENT_ID (backend) matches REACT_APP_GOOGLE_CLIENT_ID (frontend).`;
         console.error("[ERROR]", errorMsg);
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: errorMsg,
           tokenAudience: tokenFields.aud,
           expectedAudience: backendClientId
         });
       }
-    } else {
-      console.warn("[DEBUG] Could not decode JWT token payload before verification");
     }
 
     // Verify the ID token
@@ -108,9 +135,6 @@ router.post("/v1/auth/google/:type", async (req, res) => {
 
     // Extract user info from token
     const { name, email } = ticket.getPayload();
-    
-    // Debug logging (type and email, not token)
-    console.log(`Google OAuth ${req.params.type} attempt for email: ${email}`);
 
     // Handle signup flow
     if (req.params.type === "signup") {
@@ -119,7 +143,6 @@ router.post("/v1/auth/google/:type", async (req, res) => {
       
       if (dbUser) {
         // User exists, return JWT for existing user (don't throw error)
-        console.log(`Google signup: User already exists, returning existing user JWT for: ${email}`);
         const jwtToken = jwt.sign({ id: dbUser._id }, process.env.SECRET_KEY);
         return res.status(200).json({ token: jwtToken });
       }
@@ -136,7 +159,6 @@ router.post("/v1/auth/google/:type", async (req, res) => {
           return res.status(500).json({ error: "Failed to create user" });
         }
 
-        console.log(`Google signup successful for new user: ${email}`);
         const jwtToken = jwt.sign({ id: dbUser._id }, process.env.SECRET_KEY);
         return res.status(200).json({ token: jwtToken });
       } catch (createError) {
@@ -158,11 +180,9 @@ router.post("/v1/auth/google/:type", async (req, res) => {
       const dbUser = await User.findOne({ email });
       
       if (!dbUser || !dbUser._id) {
-        console.log(`Google login failed: No account found for email: ${email}`);
         return res.status(401).json({ error: "No account found. Please sign up first." });
       }
 
-      console.log(`Google login successful for: ${email}`);
       const jwtToken = jwt.sign({ id: dbUser._id }, process.env.SECRET_KEY);
       return res.status(200).json({ token: jwtToken });
     }
@@ -206,7 +226,6 @@ router.get("/get/user/data", authenticate, async (req, res) => {
     );
     res.status(200).json({ success: true, user: user });
   } catch (err) {
-    console.log(err);
     res.status(401).json({ success: false, error: err.message });
   }
 });
@@ -219,7 +238,6 @@ router.get("/stories", authenticate, async (req, res) => {
     );
     res.status(200).json({ success: true, user: user });
   } catch (error) {
-    console.log(error);
     res.status(401).json({ success: false, error: error.message });
   }
 });

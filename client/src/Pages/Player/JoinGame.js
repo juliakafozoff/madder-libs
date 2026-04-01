@@ -14,8 +14,9 @@ const JoinGame = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
-  
+
   const [gameCode, setGameCode] = useState("");
+  const [error, setError] = useState(null);
 
   // Prefill game code from URL query params
   useEffect(() => {
@@ -56,38 +57,45 @@ const JoinGame = () => {
     if (!extractedCode) {
       return;
     }
-    
+
+    setError(null);
     const code = extractedCode;
 
     const token = localStorage.getItem("userToken");
     const headers = {
       "Content-Type": "application/json",
     };
-    
-    // Only include authorization header if token exists
+
     if (token) {
       headers.authorization = token;
     }
-    
-    const response = await axios.get(`/story/get/${code}`, {
-      headers,
-    });
-    
-    // Only call /play if authenticated (for tracking)
-    if (token) {
-      await axios.put(
-        `/story/play/${code}`,
-        {},
-        {
-          headers: {
-            authorization: token,
-          },
-        }
-      );
+
+    try {
+      const response = await axios.get(`/story/get/${code}`, {
+        headers,
+      });
+
+      if (token) {
+        await axios.put(
+          `/story/play/${code}`,
+          {},
+          {
+            headers: {
+              authorization: token,
+            },
+          }
+        );
+      }
+
+      dispatch(setStory(response.data.story));
+      navigate(`/start/${code}`);
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setError("Game not found. Check your code and try again.");
+      } else {
+        setError(err.response?.data?.error || "Couldn't join game. Please try again.");
+      }
     }
-    
-    dispatch(setStory(response.data.story));
-    navigate(`/start/${code}`);
   };
 
   const handleBack = () => {
@@ -128,6 +136,20 @@ const JoinGame = () => {
         <Button onClick={joinGame} disabled={!gameCode.trim()}>
           JOIN THE GAME
         </Button>
+        {error && (
+          <div style={{
+            marginTop: 'var(--spacing-md)',
+            padding: 'var(--spacing-md)',
+            backgroundColor: '#fee2e2',
+            border: '1px solid #fecaca',
+            borderRadius: 'var(--radius-md)',
+            color: '#991b1b',
+            fontSize: '14px',
+            textAlign: 'center'
+          }}>
+            {error}
+          </div>
+        )}
         <Button 
           variant="secondary" 
           onClick={handleBack}

@@ -38,8 +38,6 @@ router.post("/create", optionalAuthenticate, async (req, res) => {
     if (!existing) break;
   } while (true);
 
-  console.log("POST /story/create - Creating story with inviteCode:", inviteCode, "storyId:", req.body.id, "userId:", req.userId || "anonymous");
-  
   try {
     const userId = req.userId || null; // Can be null for anonymous stories
     
@@ -50,7 +48,6 @@ router.post("/create", optionalAuthenticate, async (req, res) => {
         inviteCode: inviteCode,
         user: userId,
       });
-      console.log("Story.create() succeeded, story.inviteCode:", story.inviteCode);
     } catch (createError) {
       console.error("Story.create() error:", {
         message: createError.message,
@@ -62,7 +59,6 @@ router.post("/create", optionalAuthenticate, async (req, res) => {
       
       // If it's a duplicate key error, try one more time with a new code
       if (createError.code === 11000) {
-        console.log("Duplicate key error, generating new inviteCode");
         inviteCode = generateInviteCode();
         story = await Story.create({
           storyId: req.body.id,
@@ -71,7 +67,6 @@ router.post("/create", optionalAuthenticate, async (req, res) => {
         });
       } else {
         // For other errors, still create the story without inviteCode, we'll add it manually
-        console.log("Creating story without inviteCode due to error, will add manually");
         story = await Story.create({
           storyId: req.body.id,
           user: userId,
@@ -81,14 +76,12 @@ router.post("/create", optionalAuthenticate, async (req, res) => {
     
     // ALWAYS ensure inviteCode is saved, even if create failed
     if (!story.inviteCode) {
-      console.log("Story created without inviteCode, updating now...");
       try {
         story = await Story.findByIdAndUpdate(
           story._id,
           { inviteCode: inviteCode },
           { new: true }
         );
-        console.log("Updated story with inviteCode:", story?.inviteCode);
       } catch (updateError) {
         console.error("Failed to update inviteCode:", updateError.message);
         // Continue - we'll add it to response anyway
@@ -109,11 +102,8 @@ router.post("/create", optionalAuthenticate, async (req, res) => {
     // CRITICAL: ALWAYS add inviteCode to response, even if database save failed
     // This ensures the frontend always gets the inviteCode
     if (!responseStory.inviteCode) {
-      console.log("Adding inviteCode to response manually:", inviteCode);
       responseStory.inviteCode = inviteCode;
     }
-    
-    console.log("Returning story with inviteCode:", responseStory.inviteCode);
     
     return res.json({ story: responseStory });
   } catch (error) {
@@ -129,6 +119,22 @@ router.post("/create", optionalAuthenticate, async (req, res) => {
 
 router.put("/update/:storyId", optionalAuthenticate, async (req, res) => {
   try {
+    const { title, story: storyArray } = req.body;
+
+    if (title !== undefined) {
+      if (!title.trim()) {
+        return res.status(400).json({ error: "Title is required" });
+      }
+      if (title.length > 200) {
+        return res.status(400).json({ error: "Title must be under 200 characters" });
+      }
+    }
+    if (storyArray !== undefined) {
+      if (!Array.isArray(storyArray) || storyArray.length === 0) {
+        return res.status(400).json({ error: "Story must be a non-empty array" });
+      }
+    }
+
     const story = await Story.findOneAndUpdate(
       {
         storyId: req.params.storyId,
@@ -205,8 +211,6 @@ router.put("/play/:id", optionalAuthenticate, async (req, res) => {
 
 router.delete("/delete/:id", authenticate, async (req, res) => {
   try {
-    console.log("Delete request received:", { id: req.params.id, userId: req.userId });
-    
     // Try to find by _id first, then by storyId if that fails
     let story = await Story.findById(req.params.id);
     
@@ -216,15 +220,11 @@ router.delete("/delete/:id", authenticate, async (req, res) => {
     }
     
     if (!story) {
-      console.log("Story not found:", req.params.id);
       return res.status(404).json({ error: "Story not found" });
     }
     
-    console.log("Found story:", { storyId: story.storyId, userId: story.user, reqUserId: req.userId });
-    
     // Check if the story belongs to the user
     if (story.user.toString() !== req.userId.toString()) {
-      console.log("Unauthorized delete attempt");
       return res.status(403).json({ error: "Not authorized to delete this story" });
     }
     
@@ -243,7 +243,6 @@ router.delete("/delete/:id", authenticate, async (req, res) => {
     // Delete the story
     await Story.findByIdAndDelete(story._id);
     
-    console.log("Story deleted successfully");
     res.json({ success: true });
   } catch (error) {
     console.error("Delete story error:", error);
@@ -266,6 +265,12 @@ router.post("/result", optionalAuthenticate, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: resultId, templateId, title, resultText' });
     }
 
+    // Check for duplicate resultId
+    const existingResult = await StoryResult.findOne({ resultId });
+    if (existingResult) {
+      return res.status(409).json({ error: 'A result with this ID already exists' });
+    }
+
     // Find the story template to link it
     const storyTemplate = await Story.findOne({ storyId: templateId });
     const storyRef = storyTemplate ? storyTemplate._id : null;
@@ -280,14 +285,11 @@ router.post("/result", optionalAuthenticate, async (req, res) => {
       player: req.userId || null, // Can be null for anonymous players
     });
 
-    console.log("Story result saved:", { resultId, templateId, player: req.userId || "anonymous" });
-
     res.json({ success: true, result });
   } catch (error) {
     console.error("Error saving story result:", error);
     // If it's a duplicate key error, that's okay - just return success
     if (error.code === 11000) {
-      console.log("Result already exists, returning existing result");
       const existingResult = await StoryResult.findOne({ resultId: req.body.resultId });
       return res.json({ success: true, result: existingResult });
     }
@@ -334,6 +336,39 @@ router.get("/my-results", authenticate, async (req, res) => {
     res.json({ success: true, results });
   } catch (error) {
     console.error("Error fetching user's story results:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a story result
+router.delete("/result/:resultId", authenticate, async (req, res) => {
+  try {
+    const { resultId } = req.params;
+
+    const result = await StoryResult.findOne({ resultId });
+    if (!result) {
+      return res.status(404).json({ error: "Result not found" });
+    }
+
+    // Allow deletion if user is the player OR owns the parent story template
+    const isPlayer = result.player && result.player.toString() === req.userId.toString();
+
+    let isTemplateOwner = false;
+    if (result.story) {
+      const parentStory = await Story.findById(result.story);
+      if (parentStory && parentStory.user && parentStory.user.toString() === req.userId.toString()) {
+        isTemplateOwner = true;
+      }
+    }
+
+    if (!isPlayer && !isTemplateOwner) {
+      return res.status(403).json({ error: "Not authorized to delete this result" });
+    }
+
+    await StoryResult.findByIdAndDelete(result._id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Delete result error:", error);
     res.status(500).json({ error: error.message });
   }
 });

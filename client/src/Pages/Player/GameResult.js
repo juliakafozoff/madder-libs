@@ -16,14 +16,6 @@ const GameResult = () => {
 
   // Save completed story to backend and localStorage
   useEffect(() => {
-    console.log("GameResult useEffect triggered", {
-      hasStory: !!storyData.story,
-      hasResultStory: !!storyData.resultStory,
-      resultStoryLength: storyData.resultStory?.length,
-      story: storyData.story,
-      resultStory: storyData.resultStory
-    });
-
     if (storyData.story && storyData.resultStory && storyData.resultStory.length > 0 && !savedToBackend) {
       const saveResult = async () => {
         try {
@@ -38,11 +30,8 @@ const GameResult = () => {
             .join(" ")
             .trim();
 
-          console.log("Extracted resultText:", resultText);
-
           // Get templateId - try storyId first, then _id, then use a fallback
           const templateId = storyData.story.storyId || storyData.story._id || "unknown";
-          console.log("Using templateId:", templateId);
 
           const resultId = uuidv4();
           const completedStory = {
@@ -52,8 +41,6 @@ const GameResult = () => {
             resultText,
             createdAt: new Date().toISOString(),
           };
-
-          console.log("Created completedStory object:", completedStory);
 
           // Try to save to backend first
           try {
@@ -68,21 +55,16 @@ const GameResult = () => {
             const response = await axios.post("/story/result", completedStory, { headers });
             
             if (response.data.success) {
-              console.log("✅ Saved completed story to backend:", response.data.result);
               setSavedToBackend(true);
             }
           } catch (backendError) {
-            console.error("❌ Error saving to backend:", backendError);
-            console.log("⚠️ Falling back to localStorage only");
-            // Continue to localStorage fallback
+            setSaveError(true);
           }
 
           // Also save to localStorage (for offline support and backward compatibility)
           const existingStories = JSON.parse(
             localStorage.getItem("completedStories") || "[]"
           );
-
-          console.log("Existing stories count:", existingStories.length);
 
           // Check if this story already exists (avoid duplicates)
           const alreadyExists = existingStories.some(
@@ -95,10 +77,6 @@ const GameResult = () => {
 
             // Save back to localStorage
             localStorage.setItem("completedStories", JSON.stringify(updatedStories));
-            console.log("✅ Saved completed story to localStorage:", completedStory);
-            console.log("Total stories now:", updatedStories.length);
-          } else {
-            console.log("⚠️ Story already exists in localStorage, skipping save");
           }
         } catch (error) {
           console.error("Failed to save completed story:", error);
@@ -107,12 +85,6 @@ const GameResult = () => {
       };
 
       saveResult();
-    } else if (!storyData.story || !storyData.resultStory || storyData.resultStory.length === 0) {
-      console.log("⚠️ Missing story data:", { 
-        hasStory: !!storyData.story, 
-        hasResultStory: !!storyData.resultStory,
-        resultStoryLength: storyData.resultStory?.length 
-      });
     }
   }, [storyData.story, storyData.resultStory, savedToBackend]);
 

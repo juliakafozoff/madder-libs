@@ -225,20 +225,22 @@ const OldStories = () => {
           }));
         }
       } else if (deleteModal.type === "result") {
-        // Try to delete from backend first
+        // Delete from backend
         try {
           const token = localStorage.getItem("userToken");
           if (token) {
-            // Note: We don't have a delete endpoint for results yet, but we can try
-            // For now, we'll just delete from localStorage and refresh from backend
-            // TODO: Add DELETE /story/result/:resultId endpoint if needed
+            await axios.delete(`/story/result/${deleteModal.id}`, {
+              headers: {
+                "Content-Type": "application/json",
+                authorization: token,
+              },
+            });
           }
         } catch (backendError) {
           console.error("Error deleting from backend:", backendError);
-          // Continue to localStorage deletion
         }
-        
-        // Delete result from localStorage
+
+        // Also delete from localStorage
         const savedStories = JSON.parse(
           localStorage.getItem("completedStories") || "[]"
         );
