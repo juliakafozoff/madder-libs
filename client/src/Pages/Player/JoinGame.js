@@ -32,7 +32,17 @@ const JoinGame = () => {
   };
 
   const handleCodeChange = (e) => {
-    setGameCode(e.target.value);
+    let value = e.target.value;
+
+    // If pasted value looks like a URL, extract the code immediately
+    const urlMatch = value.match(/\/start\/([^\/?#]+)/);
+    if (urlMatch) {
+      value = urlMatch[1];
+    }
+
+    // Auto-uppercase and trim whitespace
+    setGameCode(value.toUpperCase().trim());
+    setError(null);
   };
 
   // Extract game code from input (handles both links and codes)
@@ -117,22 +127,33 @@ const JoinGame = () => {
         <h1 className="ui-heading">Join a Game</h1>
         <TextInput
           type="text"
-          placeholder="Enter game code"
+          placeholder="e.g. ABC123"
           label="Game Code"
           value={gameCode}
           onChange={handleCodeChange}
           required
+          autoCapitalize="characters"
+          style={{ textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'monospace' }}
         />
-        {!gameCode && (
+        {!gameCode ? (
           <p style={{
             fontSize: '13px',
             color: 'var(--text-secondary)',
             marginTop: '-8px',
             marginBottom: '0'
           }}>
-            Paste a link or enter a code
+            Paste a link or enter a 6-character code
           </p>
-        )}
+        ) : gameCode.length > 0 && gameCode.length !== 6 && !gameCode.includes('/') ? (
+          <p style={{
+            fontSize: '13px',
+            color: '#d97706',
+            marginTop: '-8px',
+            marginBottom: '0'
+          }}>
+            Codes are 6 characters ({gameCode.length}/6)
+          </p>
+        ) : null}
         <Button onClick={joinGame} disabled={!gameCode.trim()}>
           JOIN THE GAME
         </Button>

@@ -16,6 +16,7 @@ import StartGame from "./Player/StartGame";
 import PlayGame from "./Player/PlayGame";
 import GameResult from "./Player/GameResult";
 import StoryView from "./Player/StoryView";
+import PublicResult from "./Player/PublicResult";
 import InviteRedirect from "./InviteRedirect";
 
 export {
@@ -32,5 +33,6 @@ export {
   PlayGame,
   GameResult,
   StoryView,
+  PublicResult,
   InviteRedirect,
 };

@@ -38,8 +38,6 @@ app.use((req, res, next) => {
       return res.sendStatus(204);
     }
   } else {
-    // Log blocked origins for debugging
-    console.log(`CORS: Origin ${origin} not in allowed list:`, allowedOrigins);
     // Handle OPTIONS preflight even for blocked origins (respond but without CORS headers)
     // Browser will see no CORS headers and block the request
     if (req.method === "OPTIONS") {

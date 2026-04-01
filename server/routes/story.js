@@ -297,6 +297,25 @@ router.post("/result", optionalAuthenticate, async (req, res) => {
   }
 });
 
+// Get a single result by resultId (public, no auth required)
+router.get("/result/:resultId", async (req, res) => {
+  try {
+    const { resultId } = req.params;
+    const result = await StoryResult.findOne({ resultId })
+      .populate('player', 'name')
+      .populate('story', 'title storyId');
+
+    if (!result) {
+      return res.status(404).json({ error: "Result not found" });
+    }
+
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error("Error fetching result:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get all results for a specific story template
 router.get("/results/:templateId", optionalAuthenticate, async (req, res) => {
   try {

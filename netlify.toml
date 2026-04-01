@@ -7,3 +7,11 @@
   NODE_VERSION = "20"
   NODE_OPTIONS = ""
 
+[[edge_functions]]
+  function = "og-tags"
+  path = "/start/*"
+
+[[edge_functions]]
+  function = "og-tags"
+  path = "/result/*"
+

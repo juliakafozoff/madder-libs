@@ -45,7 +45,6 @@ const PlayGame = () => {
 
   const moveNextWord = (wordIndex) => {
     try {
-      console.log(wordIndex);
       setStory((prev) => {
         return prev.map((word, index) => {
           return index === wordIndex ? { ...word, result: wordInput } : word;
@@ -70,8 +69,6 @@ const PlayGame = () => {
         });
       });
       setWordInput("");
-      console.log(resultStry);
-      console.log(story);
       dispatch(setResultStory(resultStry));
       navigate("/result");
     } catch (err) {

@@ -21,12 +21,8 @@ const Login = () => {
   const passwordRef = useRef("");
 
   const handleGoogle = async (googleData) => {
-    console.log("=== handleGoogle called ===", googleData);
-    
-    // Debug: Log frontend Google Client ID
     const frontendClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-    console.log("[DEBUG] Frontend Google Client ID:", frontendClientId ? `${frontendClientId.substring(0, 20)}...` : "NOT SET");
-    
+
     // Check if this is a failure response (no tokenId)
     if (!googleData || !googleData.tokenId) {
       console.error("Google login failed: No tokenId in response", googleData);
@@ -34,20 +30,8 @@ const Login = () => {
       return;
     }
     
-    // Debug: Decode and log token payload fields (safe)
     const tokenFields = getSafeJwtFields(googleData.tokenId);
     if (tokenFields) {
-      console.log("[DEBUG] Google ID Token payload fields:", {
-        aud: tokenFields.aud,
-        iss: tokenFields.iss,
-        azp: tokenFields.azp,
-        exp: tokenFields.exp,
-        email: tokenFields.email,
-        tokenType: "id_token"
-      });
-      console.log("[DEBUG] Token audience (aud):", tokenFields.aud);
-      console.log("[DEBUG] Expected audience (frontend client ID):", frontendClientId);
-      
       // Check for audience mismatch
       if (tokenFields.aud && frontendClientId && tokenFields.aud !== frontendClientId) {
         const errorMsg = `Google OAuth audience mismatch. Token audience: ${tokenFields.aud}, Expected: ${frontendClientId}. Please ensure REACT_APP_GOOGLE_CLIENT_ID matches the Google OAuth client ID used to generate the token.`;
@@ -55,14 +39,9 @@ const Login = () => {
         toast.error(errorMsg);
         return;
       }
-    } else {
-      console.warn("[DEBUG] Could not decode JWT token payload");
     }
-    
-    console.log("Google tokenId received:", googleData.tokenId.substring(0, 50) + "...");
-    
+
     try {
-      console.log("Calling backend for Google login...");
       const res = await axios.post(
         "/user/v1/auth/google/login",
         {
@@ -88,18 +67,12 @@ const Login = () => {
       localStorage.setItem("token", jwtToken);
       localStorage.setItem("userToken", jwtToken); // Also store as userToken for compatibility
       
-      console.log("Google login successful, token stored:", jwtToken.substring(0, 20) + "...");
-      console.log("Full response:", res.data);
-      
       // Navigate directly - PrivateRoute will handle fetching user data
-      // This avoids the issue where authActions.login() removes token on failure
-      console.log("Attempting navigation to /home...");
       try {
         navigate("/home", { replace: true });
         // Fallback to window.location if navigate doesn't work
         setTimeout(() => {
           if (window.location.pathname !== "/home") {
-            console.log("Navigate didn't work, using window.location");
             window.location.href = "/home";
           }
         }, 100);
@@ -128,8 +101,6 @@ const Login = () => {
   };
 
   const handleGoogleCredential = useCallback((response) => {
-    console.log("=== Google credential response ===", response);
-    
     if (response.credential) {
       // response.credential is the ID token (JWT)
       handleGoogle({ tokenId: response.credential });

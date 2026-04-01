@@ -7,7 +7,6 @@ const PrivateRoute = () => {
   const user = useSelector((state) => {
     return state.auth.user;
   });
-  console.log(user);
   const dispatch = useDispatch();
   const [isToken, setIsToken] = useState(false);
 

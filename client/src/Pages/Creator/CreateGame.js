@@ -10,6 +10,7 @@ import Button from "../../components/ui/Button";
 import LogoutButton from "../../components/ui/LogoutButton";
 import RotatingLogo from "../../components/RotatingLogo";
 import { advanceLogoIndex } from "../../utils/logoRotation";
+import { QRCodeSVG } from "qrcode.react";
 import { useDispatch } from "react-redux";
 import { autoLogout } from "../../store/actions/auth";
 
@@ -19,16 +20,41 @@ const CreateGame = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const abortControllerRef = useRef(null);
 
+  const getInviteLink = () => `${window.location.origin}/start/${inviteCode}`;
+
   const copyInviteLink = () => {
     if (!inviteCode) return;
-    const inviteLink = `${window.location.origin}/start/${inviteCode}`;
-    copy(inviteLink);
+    copy(getInviteLink());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const shareInviteLink = async () => {
+    if (!inviteCode) return;
+    const shareData = {
+      title: 'Play my Glad Libs story!',
+      text: 'Come play my Glad Libs story!',
+      url: getInviteLink(),
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        setShared(true);
+        setTimeout(() => setShared(false), 2000);
+      } catch (err) {
+        // User cancelled or share failed — fall back to copy
+        if (err.name !== 'AbortError') {
+          copyInviteLink();
+        }
+      }
+    } else {
+      copyInviteLink();
+    }
   };
 
   const handleLogout = async () => {
@@ -45,8 +71,6 @@ const CreateGame = () => {
     setIsCreating(true);
     setError(null);
     
-    console.log("createGame: start", { gameId });
-    
     const token = localStorage.getItem("userToken");
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
@@ -55,7 +79,6 @@ const CreateGame = () => {
     
     try {
       timeoutId = setTimeout(() => {
-        console.log("createGame: timeout after 10s");
         abortController.abort();
       }, 10000);
 
@@ -81,15 +104,6 @@ const CreateGame = () => {
       
       if (timeoutId) clearTimeout(timeoutId);
       
-      console.log("createGame: success", {
-        status: response.status,
-        data: response.data,
-        story: response.data?.story,
-        inviteCode: response.data?.story?.inviteCode,
-        storyKeys: response.data?.story ? Object.keys(response.data.story) : null,
-        fullResponse: JSON.stringify(response.data, null, 2),
-      });
-      
       // Check if there's an error message instead of story
       if (response.data.error) {
         console.error("createGame: server returned error message:", response.data.error);
@@ -105,28 +119,15 @@ const CreateGame = () => {
           // Advance logo when invite code is successfully created
           advanceLogoIndex();
         } else {
-          console.warn("createGame: story exists but no inviteCode, fetching again", {
-            storyId: story.storyId,
-            storyKeys: Object.keys(story),
-            story: story
-          });
           // Fallback: fetch the story again to get inviteCode
           try {
-            console.log("createGame: attempting to fetch story with storyId:", story.storyId);
             const fetchResponse = await axios.get(`/story/get/${story.storyId}`, {
         headers: {
           "Content-Type": "application/json",
           authorization: token,
         },
             });
-            console.log("createGame: fetch response:", {
-              hasStory: !!fetchResponse.data.story,
-              inviteCode: fetchResponse.data.story?.inviteCode,
-              storyKeys: fetchResponse.data.story ? Object.keys(fetchResponse.data.story) : null,
-              fullResponse: JSON.stringify(fetchResponse.data, null, 2)
-            });
             if (fetchResponse.data.story?.inviteCode) {
-              console.log("createGame: fetched inviteCode successfully", fetchResponse.data.story.inviteCode);
               setInviteCode(fetchResponse.data.story.inviteCode);
               // Advance logo when invite code is successfully fetched
               advanceLogoIndex();
@@ -144,25 +145,12 @@ const CreateGame = () => {
           }
         }
       } else {
-        console.warn("createGame: no story in response", response.data);
         setError("Game created but response format unexpected. Please try again.");
       }
     } catch (error) {
       if (timeoutId) clearTimeout(timeoutId);
       
-      const errorDetails = {
-        message: error.message,
-        name: error.name,
-        code: error.code,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        responseData: error.response?.data,
-        isTimeout: error.name === 'AbortError' || error.code === 'ECONNABORTED',
-      };
-      
-      console.error("createGame: error", errorDetails);
-      
-      if (error.name === 'AbortError' || error.code === 'ECONNABORTED' || errorDetails.isTimeout) {
+      if (error.name === 'AbortError' || error.code === 'ECONNABORTED') {
         setError("Request timed out. Try again.");
       } else if (error.response) {
         // Server responded with error status
@@ -179,7 +167,6 @@ const CreateGame = () => {
       if (timeoutId) clearTimeout(timeoutId);
       abortControllerRef.current = null;
       setIsCreating(false);
-      console.log("createGame: finally - loading cleared");
     }
   };
 
@@ -303,46 +290,110 @@ const CreateGame = () => {
                   letterSpacing: '2px'
                 }}>{inviteCode}</code>
               </div>
-              <div style={{ position: 'relative' }}>
-          <button
-                  onClick={copyInviteLink}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 'var(--spacing-sm)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 'var(--radius-sm)',
-              transition: 'background-color var(--transition-fast)'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  aria-label="Copy invite link"
-          >
-            <ClipboardCopyIcon className="w-6 h-6" style={{ color: 'var(--color-primary)' }} />
-          </button>
-                {copied && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-32px',
-                    right: '0',
-                    backgroundColor: 'var(--text-primary)',
-                    color: 'var(--text-white)',
-                    padding: 'var(--spacing-xs) var(--spacing-sm)',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: '12px',
-                    fontWeight: 'var(--font-weight-medium)',
-                    whiteSpace: 'nowrap',
-                    pointerEvents: 'none',
-                    zIndex: 10
-                  }}>
-                    Copied!
-                  </div>
-                )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-xs)' }}>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={copyInviteLink}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 'var(--spacing-sm)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 'var(--radius-sm)',
+                      transition: 'background-color var(--transition-fast)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    aria-label="Copy invite link"
+                  >
+                    <ClipboardCopyIcon className="w-6 h-6" style={{ color: 'var(--color-primary)' }} />
+                  </button>
+                  {copied && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-32px',
+                      right: '0',
+                      backgroundColor: 'var(--text-primary)',
+                      color: 'var(--text-white)',
+                      padding: 'var(--spacing-xs) var(--spacing-sm)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '12px',
+                      fontWeight: 'var(--font-weight-medium)',
+                      whiteSpace: 'nowrap',
+                      pointerEvents: 'none',
+                      zIndex: 10
+                    }}>
+                      Copied!
+                    </div>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={shareInviteLink}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 'var(--spacing-sm)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 'var(--radius-sm)',
+                      transition: 'background-color var(--transition-fast)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    aria-label="Share invite link"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: 'var(--color-primary)', width: '24px', height: '24px' }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                  </button>
+                  {shared && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-32px',
+                      right: '0',
+                      backgroundColor: 'var(--text-primary)',
+                      color: 'var(--text-white)',
+                      padding: 'var(--spacing-xs) var(--spacing-sm)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '12px',
+                      fontWeight: 'var(--font-weight-medium)',
+                      whiteSpace: 'nowrap',
+                      pointerEvents: 'none',
+                      zIndex: 10
+                    }}>
+                      Shared!
+                    </div>
+                  )}
+                </div>
               </div>
         </div>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              marginTop: 'var(--spacing-md)',
+              marginBottom: 'var(--spacing-md)'
+            }}>
+              <QRCodeSVG
+                value={getInviteLink()}
+                size={200}
+                level="M"
+                style={{ borderRadius: 'var(--radius-sm)' }}
+              />
+              <span style={{
+                fontSize: '13px',
+                color: 'var(--text-secondary)',
+                marginTop: 'var(--spacing-sm)'
+              }}>
+                Scan to play
+              </span>
+            </div>
             <Button onClick={continueToBuilder}>
               Continue to story
         </Button>

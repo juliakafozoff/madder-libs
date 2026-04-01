@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import copy from "clipboard-copy";
 import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -12,6 +13,7 @@ const StoryView = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [story, setStory] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     // Load the specific story from localStorage
@@ -84,11 +86,60 @@ const StoryView = () => {
         }}>
           {story.resultText}
         </div>
-        <div style={{ 
-          display: 'flex', 
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: 'var(--spacing-md)',
+          marginTop: 'var(--spacing-md)'
+        }}>
+          <Button
+            onClick={async () => {
+              const url = `${window.location.origin}/result/${resultId}`;
+              if (navigator.share) {
+                try {
+                  await navigator.share({
+                    title: `"${story.title}" — Glad Libs`,
+                    text: 'Check out this Glad Libs story!',
+                    url,
+                  });
+                } catch (err) {
+                  if (err.name !== 'AbortError') {
+                    copy(url);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }
+                }
+              } else {
+                copy(url);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }
+            }}
+            style={{ maxWidth: '160px' }}
+          >
+            Share story
+          </Button>
+          <Button
+            onClick={() => {
+              copy(`${window.location.origin}/result/${resultId}`);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            }}
+            style={{
+              maxWidth: '160px',
+              backgroundColor: 'transparent',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-color)'
+            }}
+          >
+            {copied ? 'Copied!' : 'Copy link'}
+          </Button>
+        </div>
+        <div style={{
+          display: 'flex',
           justifyContent: 'space-between',
           gap: 'var(--spacing-md)',
-          marginTop: 'var(--spacing-lg)' 
+          marginTop: 'var(--spacing-lg)'
         }}>
           <Button variant="tertiary" onClick={() => navigate("/oldstories")} style={{ width: 'auto', display: 'inline-block' }}>
             Back

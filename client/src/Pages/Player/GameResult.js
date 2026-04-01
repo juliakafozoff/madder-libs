@@ -3,6 +3,7 @@ import storyResultData from "./storyResultData";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
+import copy from "clipboard-copy";
 import axios from "../../axios";
 import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
@@ -13,6 +14,8 @@ const GameResult = () => {
   const navigate = useNavigate();
   const [savedToBackend, setSavedToBackend] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  const [currentResultId, setCurrentResultId] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   // Save completed story to backend and localStorage
   useEffect(() => {
@@ -34,6 +37,7 @@ const GameResult = () => {
           const templateId = storyData.story.storyId || storyData.story._id || "unknown";
 
           const resultId = uuidv4();
+          setCurrentResultId(resultId);
           const completedStory = {
             resultId,
             templateId,
@@ -138,6 +142,52 @@ const GameResult = () => {
           <p style={{ color: 'var(--color-error, #ef4444)', fontSize: '14px', marginTop: 'var(--spacing-md)' }}>
             Something went wrong saving your story. Try playing again!
           </p>
+        )}
+        {currentResultId && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-md)' }}>
+            <Button
+              onClick={async () => {
+                const url = `${window.location.origin}/result/${currentResultId}`;
+                if (navigator.share) {
+                  try {
+                    await navigator.share({
+                      title: `"${storyData.story?.title}" — Glad Libs`,
+                      text: 'Check out this Glad Libs story!',
+                      url,
+                    });
+                  } catch (err) {
+                    if (err.name !== 'AbortError') {
+                      copy(url);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }
+                  }
+                } else {
+                  copy(url);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }
+              }}
+              style={{ maxWidth: '160px' }}
+            >
+              Share story
+            </Button>
+            <Button
+              onClick={() => {
+                copy(`${window.location.origin}/result/${currentResultId}`);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              style={{
+                maxWidth: '160px',
+                backgroundColor: 'transparent',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)'
+              }}
+            >
+              {copied ? 'Copied!' : 'Copy link'}
+            </Button>
+          </div>
         )}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--spacing-lg)' }}>
           <Button onClick={() => navigate("/home")} style={{ maxWidth: '200px' }}>

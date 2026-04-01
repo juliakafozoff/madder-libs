@@ -17,6 +17,7 @@ import {
   Signup,
   StartGame,
   StoryView,
+  PublicResult,
   Welcome,
   InviteRedirect,
 } from "./Pages";
@@ -42,6 +43,7 @@ const App = () => {
             <LogoRouteListener />
             <Routes>
               <Route path="/result" element={<GameResult />} />
+              <Route path="/result/:resultId" element={<PublicResult />} />
               <Route path="/play" element={<PlayGame />} />
               <Route path="/start/:id" element={<StartGame />} />
               <Route path="/story/:resultId" element={<StoryView />} />
