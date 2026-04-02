@@ -5,7 +5,7 @@ import axios from "../../axios";
 import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
-import { detectPOS, WORD_TYPES } from "../../utils/posDetection";
+import { detectPOS, WORD_TYPES, getFormLabel, getFormOptionsForType } from "../../utils/posDetection";
 
 const GapSelector = () => {
   const { textId } = useParams();
@@ -14,10 +14,10 @@ const GapSelector = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [words, setWords] = useState([]);
-  const [gaps, setGaps] = useState({}); // { index: { type, form } }
-  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [gaps, setGaps] = useState({});
   const [headerCollapsed, setHeaderCollapsed] = useState(window.innerWidth < 768);
   const [saving, setSaving] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
 
   useEffect(() => {
     const fetchText = async () => {
@@ -25,7 +25,6 @@ const GapSelector = () => {
         const res = await axios.get(`/library/texts/${textId}`);
         if (res.data.success && res.data.text) {
           setText(res.data.text);
-          // Split into words preserving whitespace
           const splitWords = res.data.text.fullText.split(/(\s+)/);
           setWords(splitWords);
         } else {
@@ -55,41 +54,42 @@ const GapSelector = () => {
         if (next[index]) {
           delete next[index];
         } else {
-          // Get surrounding words for context
           const wordList = words.filter((w) => w.trim());
           const wordOnlyIndex = wordList.indexOf(words[index]);
           const prevWord = wordOnlyIndex > 0 ? wordList[wordOnlyIndex - 1] : "";
           const nextWord = wordOnlyIndex < wordList.length - 1 ? wordList[wordOnlyIndex + 1] : "";
           const detected = detectPOS(words[index], prevWord, nextWord);
-          next[index] = { type: detected, form: "any" };
+          next[index] = { type: detected.type, form: detected.form };
         }
         return next;
       });
-      setActiveDropdown(null);
     },
     [words]
   );
 
-  const changeType = (index, newType) => {
+  const updateGapType = (index, newType) => {
     setGaps((prev) => ({
       ...prev,
-      [index]: { ...prev[index], type: newType },
+      [index]: { ...prev[index], type: newType, form: "any" },
     }));
-    setActiveDropdown(null);
+  };
+
+  const updateGapForm = (index, newForm) => {
+    setGaps((prev) => ({
+      ...prev,
+      [index]: { ...prev[index], form: newForm },
+    }));
   };
 
   const clearAll = () => {
     setGaps({});
-    setActiveDropdown(null);
   };
 
-  const handleDone = async () => {
+  const handleCreate = async () => {
     if (gapCount === 0) return;
 
-    // Check auth
     const token = localStorage.getItem("userToken");
     if (!token) {
-      // Save state to sessionStorage and redirect to login
       sessionStorage.setItem(
         "libraryGapState",
         JSON.stringify({ textId, gaps })
@@ -100,31 +100,25 @@ const GapSelector = () => {
 
     setSaving(true);
     try {
-      // Build story array matching GameCreator format
       const storyArray = [];
-      let gapNumber = 0;
 
       for (let i = 0; i < words.length; i++) {
         if (gaps[i]) {
-          gapNumber++;
+          const formLabel = getFormLabel(gaps[i].form);
+          const displayText = formLabel
+            ? `${gaps[i].type} (${formLabel})`
+            : gaps[i].type;
           storyArray.push({
             tag: "span",
             className: "filled-word",
-            text: gaps[i].type,
+            text: displayText,
             form: gaps[i].form || "any",
           });
         } else {
-          // Text content
-          const w = words[i];
-          if (w.trim()) {
-            storyArray.push(w);
-          } else if (w) {
-            storyArray.push(w);
-          }
+          storyArray.push(words[i]);
         }
       }
 
-      // Create story
       const gameId = uuidv4();
       const createRes = await axios.post(
         "/story/create",
@@ -141,9 +135,6 @@ const GapSelector = () => {
         throw new Error("Failed to create game");
       }
 
-      const inviteCode = createRes.data.story.inviteCode;
-
-      // Update with story array and title
       await axios.put(
         `/story/update/${gameId}`,
         {
@@ -159,14 +150,10 @@ const GapSelector = () => {
         }
       );
 
-      // Increment play count
       try {
         await axios.put(`/library/texts/${textId}/play`);
-      } catch (e) {
-        // Non-critical
-      }
+      } catch (e) {}
 
-      // Navigate to the created game screen
       navigate(`/created-game/${gameId}`);
     } catch (err) {
       console.error("Failed to create game:", err);
@@ -176,7 +163,6 @@ const GapSelector = () => {
     }
   };
 
-  // Restore gap state after login redirect
   useEffect(() => {
     const saved = sessionStorage.getItem("libraryGapState");
     if (saved) {
@@ -185,9 +171,7 @@ const GapSelector = () => {
         if (parsed.textId === textId && parsed.gaps) {
           setGaps(parsed.gaps);
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
       sessionStorage.removeItem("libraryGapState");
     }
   }, [textId]);
@@ -214,11 +198,206 @@ const GapSelector = () => {
   }
 
   const diff = difficultyLabel();
+  const gapEntries = Object.entries(gaps)
+    .map(([index, gap]) => ({ index: Number(index), word: words[Number(index)], ...gap }))
+    .sort((a, b) => a.index - b.index);
+
+  if (reviewing) {
+    return (
+      <PageShell className="gap-selector-shell">
+        <Card style={{ maxWidth: "800px", paddingBottom: "100px" }}>
+          <button
+            onClick={() => setReviewing(false)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--text-secondary)",
+              cursor: "pointer",
+              padding: "0",
+              marginBottom: "var(--spacing-md)",
+              fontSize: "14px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            ← Back to text
+          </button>
+
+          <h1 className="ui-heading" style={{ marginBottom: "var(--spacing-xs)" }}>
+            Review Your Blanks
+          </h1>
+          <p style={{
+            fontSize: "14px",
+            color: "var(--text-secondary)",
+            marginBottom: "var(--spacing-lg)",
+            marginTop: 0,
+          }}>
+            Check that each blank has the right type. This is what players will be asked to fill in.
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {gapEntries.map((gap, i) => {
+              const formOptions = getFormOptionsForType(gap.type);
+              const hasFormOptions = formOptions.length > 0;
+              return (
+                <div
+                  key={gap.index}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "12px 16px",
+                    borderRadius: "var(--radius-md)",
+                    backgroundColor: "rgba(243, 129, 0, 0.06)",
+                    border: "1px solid rgba(243, 129, 0, 0.15)",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span style={{
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    color: "var(--text-secondary)",
+                    minWidth: "24px",
+                  }}>
+                    {i + 1}.
+                  </span>
+
+                  <span style={{
+                    fontSize: "15px",
+                    color: "var(--text-primary)",
+                    fontStyle: "italic",
+                    minWidth: "100px",
+                    flex: "0 0 auto",
+                  }}>
+                    "{gap.word}"
+                  </span>
+
+                  <span style={{ color: "var(--text-secondary)", fontSize: "14px" }}>→</span>
+
+                  <select
+                    value={gap.type}
+                    onChange={(e) => updateGapType(gap.index, e.target.value)}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: "var(--radius-sm)",
+                      border: "1px solid var(--border-color)",
+                      fontSize: "14px",
+                      fontFamily: "inherit",
+                      backgroundColor: "#fff",
+                      cursor: "pointer",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {WORD_TYPES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+
+                  {hasFormOptions && (
+                    <select
+                      value={gap.form}
+                      onChange={(e) => updateGapForm(gap.index, e.target.value)}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: "var(--radius-sm)",
+                        border: "1px solid var(--border-color)",
+                        fontSize: "14px",
+                        fontFamily: "inherit",
+                        backgroundColor: "#fff",
+                        cursor: "pointer",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {formOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}{opt.example ? ` ${opt.example}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setGaps((prev) => {
+                        const next = { ...prev };
+                        delete next[gap.index];
+                        return next;
+                      });
+                    }}
+                    style={{
+                      marginLeft: "auto",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "16px",
+                      color: "var(--text-secondary)",
+                      padding: "4px",
+                      lineHeight: 1,
+                    }}
+                    title="Remove this blank"
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {gapEntries.length === 0 && (
+            <p style={{ textAlign: "center", color: "var(--text-secondary)", padding: "var(--spacing-xl) 0" }}>
+              No blanks selected. Go back to add some.
+            </p>
+          )}
+        </Card>
+
+        {gapEntries.length > 0 && (
+          <div
+            style={{
+              position: "fixed",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(8px)",
+              borderTop: "1px solid var(--border-color)",
+              padding: "12px 20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              zIndex: 50,
+            }}
+          >
+            <span style={{ fontSize: "15px", fontWeight: 600 }}>
+              {gapEntries.length} blank{gapEntries.length !== 1 ? "s" : ""} ready
+            </span>
+            <button
+              onClick={handleCreate}
+              disabled={saving}
+              style={{
+                padding: "8px 24px",
+                borderRadius: "var(--radius-sm)",
+                border: "none",
+                backgroundColor: "var(--color-primary)",
+                color: "#fff",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: 600,
+                fontFamily: "inherit",
+              }}
+            >
+              {saving ? "Creating..." : "Create Game"}
+            </button>
+          </div>
+        )}
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell className="gap-selector-shell">
       <Card style={{ maxWidth: "800px", paddingBottom: "100px" }}>
-        {/* Back to Library */}
         <button
           onClick={() => navigate("/library")}
           style={{
@@ -236,7 +415,7 @@ const GapSelector = () => {
         >
           ← Back to Library
         </button>
-        {/* Header */}
+
         <div style={{ marginBottom: "var(--spacing-lg)" }}>
           <div
             style={{
@@ -309,7 +488,6 @@ const GapSelector = () => {
           </p>
         </div>
 
-        {/* Text display */}
         <div
           style={{
             fontSize: "18px",
@@ -318,10 +496,8 @@ const GapSelector = () => {
             padding: "var(--spacing-md)",
             userSelect: "none",
           }}
-          onClick={() => setActiveDropdown(null)}
         >
           {words.map((word, index) => {
-            // Skip whitespace-only tokens
             if (!word.trim()) {
               return <span key={index}>{word}</span>;
             }
@@ -331,14 +507,7 @@ const GapSelector = () => {
             return (
               <span
                 key={index}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (activeDropdown === index) {
-                    setActiveDropdown(null);
-                  } else {
-                    toggleGap(index);
-                  }
-                }}
+                onClick={() => toggleGap(index)}
                 style={{
                   display: "inline",
                   padding: "3px 2px",
@@ -370,12 +539,6 @@ const GapSelector = () => {
                   <>
                     <span style={{ opacity: 0.35 }}>{word}</span>
                     <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveDropdown(
-                          activeDropdown === index ? null : index
-                        );
-                      }}
                       style={{
                         display: "inline-block",
                         marginLeft: "2px",
@@ -385,60 +548,12 @@ const GapSelector = () => {
                         fontWeight: 600,
                         backgroundColor: "var(--color-primary)",
                         color: "#fff",
-                        cursor: "pointer",
                         verticalAlign: "super",
                         lineHeight: "1.4",
                       }}
                     >
                       {gaps[index].type}
                     </span>
-                    {activeDropdown === index && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: "100%",
-                          left: "0",
-                          zIndex: 100,
-                          backgroundColor: "#fff",
-                          border: "1px solid var(--border-color)",
-                          borderRadius: "var(--radius-md)",
-                          boxShadow: "var(--shadow-sm)",
-                          padding: "4px 0",
-                          minWidth: "120px",
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {WORD_TYPES.map((type) => (
-                          <div
-                            key={type}
-                            onClick={() => changeType(index, type)}
-                            style={{
-                              padding: "6px 12px",
-                              fontSize: "13px",
-                              cursor: "pointer",
-                              backgroundColor:
-                                gaps[index].type === type
-                                  ? "rgba(243, 129, 0, 0.1)"
-                                  : "transparent",
-                              fontWeight:
-                                gaps[index].type === type ? 600 : 400,
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                "rgba(243, 129, 0, 0.08)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                gaps[index].type === type
-                                  ? "rgba(243, 129, 0, 0.1)"
-                                  : "transparent";
-                            }}
-                          >
-                            {type}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </>
                 ) : (
                   word
@@ -449,7 +564,6 @@ const GapSelector = () => {
         </div>
       </Card>
 
-      {/* Sticky status bar */}
       <div
         style={{
           position: "fixed",
@@ -470,7 +584,7 @@ const GapSelector = () => {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <span style={{ fontSize: "15px", fontWeight: 600 }}>
-            {gapCount} gap{gapCount !== 1 ? "s" : ""} selected
+            {gapCount} blank{gapCount !== 1 ? "s" : ""} selected
           </span>
           {gapCount > 0 && (
             <span
@@ -507,8 +621,8 @@ const GapSelector = () => {
             </button>
           )}
           <button
-            onClick={handleDone}
-            disabled={gapCount === 0 || saving}
+            onClick={() => setReviewing(true)}
+            disabled={gapCount === 0}
             style={{
               padding: "8px 24px",
               borderRadius: "var(--radius-sm)",
@@ -524,7 +638,7 @@ const GapSelector = () => {
               fontFamily: "inherit",
             }}
           >
-            {saving ? "Creating..." : "Done — Create Game"}
+            Review Blanks
           </button>
         </div>
       </div>

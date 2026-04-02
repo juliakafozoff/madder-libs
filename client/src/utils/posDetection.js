@@ -18,6 +18,16 @@ const COMMON_NOUNS = new Set([
   "storm", "ground", "road", "path", "bridge", "wall", "tower", "bowl", "basket", "coat",
 ]);
 
+const COMMON_PLURAL_NOUNS = new Set([
+  "people", "others", "members", "eyes", "hands", "days", "years", "things", "words",
+  "times", "children", "men", "women", "friends", "lives", "places", "streets", "trees",
+  "stars", "mountains", "rivers", "fields", "soldiers", "nations", "lands", "walls",
+  "roads", "towers", "windows", "hearts", "stones", "swords", "ships", "castles",
+  "dogs", "cats", "birds", "horses", "flowers", "clouds", "waves", "hills", "rooms",
+  "houses", "doors", "books", "cities", "towns", "countries", "islands", "forests",
+  "gardens", "churches", "schools", "tables", "chairs", "brothers", "sisters",
+]);
+
 const COMMON_VERBS = new Set([
   "is", "was", "are", "were", "be", "been", "being", "have", "has", "had", "do", "does",
   "did", "will", "would", "could", "should", "may", "might", "shall", "can", "need",
@@ -63,33 +73,103 @@ const WORD_TYPES = [
   "Emotion", "Color", "Number", "Size", "Time",
 ];
 
+const FORM_OPTIONS = {
+  Thing: [
+    { value: "any", label: "Any", example: "" },
+    { value: "plural", label: "Plural", example: "(dogs, mountains)" },
+  ],
+  Verb: [
+    { value: "any", label: "Any", example: "" },
+    { value: "past", label: "Past tense", example: "(walked, ran)" },
+    { value: "gerund", label: "Ending in -ing", example: "(walking, running)" },
+    { value: "present-3rd", label: "He/she/it form", example: "(walks, runs)" },
+  ],
+  Adjective: [
+    { value: "any", label: "Any", example: "" },
+    { value: "comparative", label: "Comparative (-er)", example: "(bigger, taller)" },
+    { value: "superlative", label: "Superlative (-est)", example: "(biggest, tallest)" },
+  ],
+  Person: [
+    { value: "any", label: "Any", example: "" },
+    { value: "specific-person", label: "Specific person", example: "(Grandma, Elvis)" },
+    { value: "type-of-person", label: "Type of person", example: "(teacher, bully)" },
+  ],
+  Time: [
+    { value: "any", label: "Any", example: "" },
+    { value: "time-of-day", label: "Time of day", example: "(dawn, 3 PM)" },
+    { value: "date", label: "Date", example: "(July 4th)" },
+    { value: "month-season", label: "Month or season", example: "(May, spring)" },
+    { value: "year-era", label: "Year or era", example: "(1999, the 1800s)" },
+  ],
+};
+
+const FORM_DISPLAY = {
+  any: "",
+  plural: "plural",
+  past: "past tense",
+  gerund: "-ing",
+  "present-3rd": "he/she/it",
+  comparative: "-er",
+  superlative: "-est",
+  "specific-person": "specific",
+  "type-of-person": "type of person",
+  "time-of-day": "time of day",
+  date: "date",
+  "month-season": "month/season",
+  "year-era": "year/era",
+};
+
 function detectPOS(word, prevWord, nextWord) {
   const lower = word.toLowerCase().replace(/[^a-z'-]/g, "");
-  if (!lower) return "Thing";
+  if (!lower) return { type: "Thing", form: "any" };
 
-  // Lookup maps first
-  if (COMMON_ADJECTIVES.has(lower)) return "Adjective";
-  if (COMMON_ADVERBS.has(lower)) return "Adverb";
-  if (COMMON_VERBS.has(lower)) return "Verb";
-  if (COMMON_NOUNS.has(lower)) return "Thing";
+  // Lookup maps first — base forms in these sets get "any"
+  if (COMMON_ADJECTIVES.has(lower)) {
+    if (lower === "best" || lower === "worst") return { type: "Adjective", form: "superlative" };
+    if (lower === "better" || lower === "worse") return { type: "Adjective", form: "comparative" };
+    return { type: "Adjective", form: "any" };
+  }
+  if (COMMON_ADVERBS.has(lower)) return { type: "Adverb", form: "any" };
+  if (COMMON_VERBS.has(lower)) return { type: "Verb", form: "any" };
+  if (COMMON_PLURAL_NOUNS.has(lower)) return { type: "Thing", form: "plural" };
+  if (COMMON_NOUNS.has(lower)) return { type: "Thing", form: "any" };
 
-  // Suffix rules
-  if (lower.endsWith("ly") && lower.length > 3) return "Adverb";
-  if (lower.endsWith("tion") || lower.endsWith("ment") || lower.endsWith("ness") || lower.endsWith("ity")) return "Thing";
-  if (lower.endsWith("ful") || lower.endsWith("ous") || lower.endsWith("ive") || lower.endsWith("ish") || lower.endsWith("al")) return "Adjective";
-  if (lower.endsWith("ing") || lower.endsWith("ed")) return "Verb";
+  // Suffix rules — these also detect form
+  if (lower.endsWith("ly") && lower.length > 3) return { type: "Adverb", form: "any" };
+  if (lower.endsWith("tion") || lower.endsWith("ment") || lower.endsWith("ness") || lower.endsWith("ity")) return { type: "Thing", form: "any" };
+
+  if (lower.endsWith("est") && lower.length > 4) return { type: "Adjective", form: "superlative" };
+  if (lower.endsWith("er") && lower.length > 3 && !lower.endsWith("ter") && !lower.endsWith("ther")) return { type: "Adjective", form: "comparative" };
+  if (lower.endsWith("ful") || lower.endsWith("ous") || lower.endsWith("ive") || lower.endsWith("ish") || lower.endsWith("al")) return { type: "Adjective", form: "any" };
+
+  if (lower.endsWith("ing") && lower.length > 4) return { type: "Verb", form: "gerund" };
+  if (lower.endsWith("ed") && lower.length > 3) return { type: "Verb", form: "past" };
+
+  // Plural noun detection — words ending in s/es not caught above
+  if ((lower.endsWith("s") || lower.endsWith("es")) && lower.length > 3 && !lower.endsWith("ss") && !lower.endsWith("us")) {
+    const prevLower = (prevWord || "").toLowerCase().replace(/[^a-z]/g, "");
+    if (ARTICLES.has(prevLower) || prevLower === "the" || prevLower === "these" || prevLower === "those" || prevLower === "many" || prevLower === "some" || prevLower === "all" || prevLower === "few") {
+      return { type: "Thing", form: "plural" };
+    }
+  }
 
   // Context rules
   const prevLower = (prevWord || "").toLowerCase().replace(/[^a-z]/g, "");
-  if (ARTICLES.has(prevLower)) return "Thing";
-  if (prevLower === PREPOSITION_TO) return "Verb";
+  if (ARTICLES.has(prevLower)) return { type: "Thing", form: "any" };
+  if (prevLower === PREPOSITION_TO) return { type: "Verb", form: "any" };
 
-  // Check if next word looks like a noun (after articles) — this word might be adjective
   const nextLower = (nextWord || "").toLowerCase().replace(/[^a-z]/g, "");
-  if (COMMON_NOUNS.has(nextLower)) return "Adjective";
+  if (COMMON_NOUNS.has(nextLower)) return { type: "Adjective", form: "any" };
 
-  // Default
-  return "Thing";
+  return { type: "Thing", form: "any" };
 }
 
-export { detectPOS, WORD_TYPES };
+function getFormLabel(form) {
+  return FORM_DISPLAY[form] || "";
+}
+
+function getFormOptionsForType(type) {
+  return FORM_OPTIONS[type] || [];
+}
+
+export { detectPOS, WORD_TYPES, FORM_OPTIONS, FORM_DISPLAY, getFormLabel, getFormOptionsForType };
