@@ -4,9 +4,9 @@ import Home from "./Home";
 import Login from "./Login";
 import Signup from "./Signup";
 import OldStories from "./OldStories";
+import PhoneLogin from "./Auth/PhoneLogin";
 
 //Story Creator
-import CreateGame from "./Creator/CreateGame";
 import GameCreator from "./Creator/GameCreator";
 import CreatedGame from "./Creator/CreatedGame";
 
@@ -33,7 +33,6 @@ export {
   Login,
   Signup,
   OldStories,
-  CreateGame,
   GameCreator,
   CreatedGame,
   JoinGame,
@@ -47,4 +46,5 @@ export {
   PartnerView,
   LibraryHome,
   GapSelector,
+  PhoneLogin,
 };

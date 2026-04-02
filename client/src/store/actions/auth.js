@@ -1,4 +1,6 @@
 import axios from "../../axios";
+import { signOut as firebaseSignOut } from "firebase/auth";
+import { auth } from "../../services/firebase";
 
 export const SET_USER = "SET_USER";
 
@@ -49,6 +51,20 @@ export const login = (token) => {
   };
 };
 
+export const loginWithFirebaseToken = (firebaseIdToken) => {
+  return async (dispatch) => {
+    try {
+      const res = await axios.post("/auth/firebase", { firebaseToken: firebaseIdToken });
+      const jwt = res.data.token;
+      localStorage.setItem("userToken", jwt);
+      await dispatch(login(jwt));
+    } catch (err) {
+      console.error("Firebase login error:", err);
+      dispatch(loginFailed());
+    }
+  };
+};
+
 export const userLogout = () => {
   return {
     type: LOGOUT,
@@ -59,6 +75,9 @@ export const autoLogout = () => {
   return async (dispatch) => {
     try {
       localStorage.removeItem("userToken");
+      if (auth) {
+        await firebaseSignOut(auth);
+      }
       dispatch(userLogout());
     } catch (err) {
       throw new Error(err);

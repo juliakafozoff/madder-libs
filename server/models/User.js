@@ -3,16 +3,25 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema(
   {
     name: {
-      required: true,
       type: String,
+      default: "",
     },
     email: {
-      unique: true,
-      required: true,
       type: String,
+      unique: true,
+      sparse: true,
     },
     password: String,
     type: String,
+    firebaseUid: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    phoneNumber: {
+      type: String,
+      sparse: true,
+    },
     storiesCreated: [{ type: mongoose.Types.ObjectId, ref: "stories" }],
     storiesPlayed: [{ type: mongoose.Types.ObjectId, ref: "stories" }],
   },

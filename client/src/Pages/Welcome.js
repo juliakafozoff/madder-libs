@@ -58,16 +58,13 @@ const Welcome = () => {
           <Button variant="secondary" onClick={() => navigate("/library")}>
             Pick a Famous Text
           </Button>
-          <Button variant="secondary" onClick={() => navigate("/login")}>
-            Log In
-          </Button>
         </div>
         <div style={{
           textAlign: 'center',
           marginTop: '20px'
         }}>
           <button
-            onClick={() => navigate("/signup")}
+            onClick={() => navigate("/join")}
             style={linkStyles}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = 'var(--color-primary-hover)';
@@ -80,7 +77,7 @@ const Welcome = () => {
               e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
-            New here? Sign up for free
+            Got a link or code? Join a game
           </button>
         </div>
         <div style={{
@@ -88,26 +85,23 @@ const Welcome = () => {
           marginTop: '8px'
         }}>
           <button
-            onClick={() => navigate("/join")}
+            onClick={() => navigate("/auth")}
             style={{
               ...linkStyles,
               fontWeight: 400,
-              opacity: 0.85
+              opacity: 0.7,
+              fontSize: '14px',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--color-primary-hover)';
-              e.currentTarget.style.textDecoration = 'underline';
               e.currentTarget.style.opacity = '1';
-              e.currentTarget.style.backgroundColor = 'rgba(243, 129, 0, 0.05)';
+              e.currentTarget.style.textDecoration = 'underline';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--color-primary)';
+              e.currentTarget.style.opacity = '0.7';
               e.currentTarget.style.textDecoration = 'none';
-              e.currentTarget.style.opacity = '0.85';
-              e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
-            Got a link or code? Join a game →
+            Sign in
           </button>
         </div>
       </Card>

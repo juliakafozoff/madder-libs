@@ -8,6 +8,7 @@ const connectDB = require("./config/db");
 const userRouter = require("./routes/user");
 const storyRouter = require("./routes/story");
 const libraryRouter = require("./routes/library");
+const authRouter = require("./routes/auth");
 const initGameHandler = require("./sockets/gameHandler");
 
 const app = express();
@@ -74,6 +75,7 @@ app.get("/health", (req, res) => {
 app.use("/user", userRouter);
 app.use("/story", storyRouter);
 app.use("/library", libraryRouter);
+app.use("/auth", authRouter);
 
 app.get("/", (req, res) => {
   res.send("ho");

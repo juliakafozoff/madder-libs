@@ -5,8 +5,8 @@ import PageShell from "../components/ui/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import LogoutButton from "../components/ui/LogoutButton";
-import { useDispatch } from "react-redux";
-import { autoLogout } from "../store/actions/auth";
+import { useAuth } from "../contexts/AuthContext";
+import AuthPrompt from "../components/AuthPrompt";
 import axios from "../axios";
 import { useToast } from "../components/ui/Toast";
 
@@ -17,7 +17,7 @@ const OldStories = () => {
   const [loading, setLoading] = useState(true);
   const [deleteModal, setDeleteModal] = useState(null); // { type: 'template'|'result', id: string, title: string }
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const { signOut, isAuthenticated } = useAuth();
   const toast = useToast();
 
   useEffect(() => {
@@ -152,8 +152,8 @@ const OldStories = () => {
   }, []);
 
   const handleLogout = async () => {
-    await dispatch(autoLogout());
-    navigate("/login");
+    await signOut();
+    navigate("/");
   };
 
   const handleCopyCode = (e, code) => {
@@ -636,12 +636,28 @@ const OldStories = () => {
     );
   };
 
+  if (!isAuthenticated) {
+    return (
+      <PageShell>
+        <Card>
+          <h1 className="ui-heading">My Stories</h1>
+          <AuthPrompt message="Sign in to see your saved stories." />
+          <div style={{ marginTop: 'var(--spacing-lg)', textAlign: 'left' }}>
+            <Button variant="tertiary" onClick={() => navigate("/home")} style={{ width: 'auto', display: 'inline-block' }}>
+              Back
+            </Button>
+          </div>
+        </Card>
+      </PageShell>
+    );
+  }
+
   return (
     <PageShell>
       <LogoutButton onClick={handleLogout} />
       <Card>
         <h1 className="ui-heading">My Stories</h1>
-        
+
         {/* Tab Toggle */}
         <div style={{
           display: 'flex',

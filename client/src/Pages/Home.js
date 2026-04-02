@@ -1,7 +1,7 @@
 import React from "react";
-import { useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { autoLogout } from "../store/actions/auth";
+import { useAuth } from "../contexts/AuthContext";
 import PageShell from "../components/ui/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -10,23 +10,26 @@ import RotatingLogo from "../components/RotatingLogo";
 
 const Home = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const { isAuthenticated, signOut } = useAuth();
+  const user = useSelector((state) => state.auth.user);
 
-  const userLogout = async () => {
-    await dispatch(autoLogout());
-    navigate("/login");
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
   };
 
   return (
     <PageShell>
-      <LogoutButton onClick={userLogout} />
+      {isAuthenticated && <LogoutButton onClick={handleLogout} />}
       <Card>
-        <RotatingLogo 
+        <RotatingLogo
           maxWidth="300px"
           marginBottom="16px"
           alt="Glad Libs"
         />
-        <h1 className="ui-heading ui-heading--large">Welcome</h1>
+        <h1 className="ui-heading ui-heading--large">
+          {isAuthenticated && user?.name ? `Hey, ${user.name.split(' ')[0]}!` : 'Welcome'}
+        </h1>
         <Button onClick={() => navigate("/create")}>
           Create a Game
         </Button>
@@ -36,9 +39,42 @@ const Home = () => {
         <Button onClick={() => navigate("/join")}>
           Join a Game
         </Button>
-        <Button variant="secondary" onClick={() => navigate("/oldstories")}>
-          My Stories
-        </Button>
+        {isAuthenticated && (
+          <Button variant="secondary" onClick={() => navigate("/oldstories")}>
+            My Stories
+          </Button>
+        )}
+        {!isAuthenticated && (
+          <div style={{
+            marginTop: 'var(--spacing-md)',
+            padding: 'var(--spacing-md)',
+            backgroundColor: 'rgba(243, 129, 0, 0.05)',
+            borderRadius: 'var(--radius-md)',
+            textAlign: 'center',
+          }}>
+            <p style={{
+              fontSize: '14px',
+              color: 'var(--text-secondary)',
+              margin: '0 0 var(--spacing-sm) 0',
+            }}>
+              Sign up to save your stories and see when friends play them
+            </p>
+            <button
+              onClick={() => navigate("/auth")}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-primary)',
+                fontSize: '15px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontWeight: 500,
+              }}
+            >
+              Create free account
+            </button>
+          </div>
+        )}
       </Card>
     </PageShell>
   );

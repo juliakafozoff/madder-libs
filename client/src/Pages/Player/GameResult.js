@@ -11,6 +11,7 @@ import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import PresentationMode from "../../components/PresentationMode";
 import StoryIllustration from "../../components/StoryIllustration";
+import AuthPrompt from "../../components/AuthPrompt";
 
 const GameResult = () => {
   const storyData = useSelector((state) => state.storyData);
@@ -113,7 +114,7 @@ const GameResult = () => {
   // Navigate away if data is missing
   useEffect(() => {
     if (!storyData.story || !storyData.resultStory || storyData.resultStory.length === 0) {
-      navigate("/home");
+      navigate("/");
     }
   }, [storyData.story, storyData.resultStory, navigate]);
 
@@ -177,12 +178,10 @@ const GameResult = () => {
           {storyData.resultStory.map((word, index) => {
             if (typeof word === "object") {
               return (
-                <span key={index} className="filled-word">
-                  {word.result}{" "}
-                </span>
+                <span key={index} className="filled-word">{word.result}</span>
               );
             }
-            return <span key={index}> {word} </span>;
+            return <React.Fragment key={index}>{word}</React.Fragment>;
           })}
         </div>
 
@@ -293,10 +292,53 @@ const GameResult = () => {
         {(showIllustration || !showPresentation) && currentResultId && (
           <StoryIllustration resultId={currentResultId} title={storyData.story?.title} />
         )}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--spacing-lg)' }}>
-          <Button onClick={() => navigate("/home")} style={{ maxWidth: '200px' }}>
-            Go to Home
+
+        <AuthPrompt message="Want to save this? Enter your phone number." />
+
+        {/* Next steps */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--spacing-sm)',
+          marginTop: 'var(--spacing-lg)',
+          alignItems: 'center',
+        }}>
+          <Button
+            onClick={() => {
+              // Play the same template again with fresh words
+              const templateId = storyData.story?.storyId || storyData.story?._id;
+              if (templateId) {
+                navigate(`/start/${storyData.story?.inviteCode || templateId}`);
+              } else {
+                navigate("/");
+              }
+            }}
+            style={{ maxWidth: '280px', width: '100%' }}
+          >
+            Play Again
           </Button>
+          <Button
+            variant="secondary"
+            onClick={() => navigate("/create")}
+            style={{ maxWidth: '280px', width: '100%' }}
+          >
+            Create Your Own Story
+          </Button>
+          <button
+            onClick={() => navigate("/")}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-secondary)',
+              fontSize: '14px',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              padding: 'var(--spacing-sm)',
+              marginTop: 'var(--spacing-xs)',
+            }}
+          >
+            Back to home
+          </button>
         </div>
       </Card>
     </PageShell>
