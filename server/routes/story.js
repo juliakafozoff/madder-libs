@@ -1,10 +1,18 @@
 const router = require("express").Router();
 const mongoose = require("mongoose");
+const rateLimit = require("express-rate-limit");
 const authenticate = require("../middlewares/authenticate");
 const optionalAuthenticate = require("../middlewares/optionalAuthenticate");
 const Story = require("../models/Story");
 const User = require("../models/User");
 const StoryResult = require("../models/StoryResult");
+const { generateIllustration } = require("../services/ai");
+
+const illustrationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many illustration requests. Try again later." },
+});
 
 // Generate a random invite code (5-7 characters, uppercase letters + numbers)
 const generateInviteCode = () => {
@@ -389,6 +397,35 @@ router.delete("/result/:resultId", authenticate, async (req, res) => {
   } catch (error) {
     console.error("Delete result error:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Generate illustration for a story result
+router.post("/result/:resultId/illustration", optionalAuthenticate, illustrationLimiter, async (req, res) => {
+  try {
+    const { resultId } = req.params;
+    const result = await StoryResult.findOne({ resultId });
+
+    if (!result) {
+      return res.status(404).json({ error: "Result not found" });
+    }
+
+    if (result.illustrationUrl) {
+      return res.json({ illustrationUrl: result.illustrationUrl });
+    }
+
+    const illustrationUrl = await generateIllustration(result.title, result.resultText);
+    if (!illustrationUrl) {
+      return res.status(503).json({ msg: "Illustrations not available" });
+    }
+
+    result.illustrationUrl = illustrationUrl;
+    await result.save();
+
+    res.json({ illustrationUrl });
+  } catch (error) {
+    console.error("Error generating illustration:", error);
+    res.status(500).json({ error: "Failed to generate illustration" });
   }
 });
 

@@ -30,6 +30,10 @@ const storyResultSchema = new mongoose.Schema(
       ref: "users",
       required: false, // Can be null for anonymous players
     },
+    illustrationUrl: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,

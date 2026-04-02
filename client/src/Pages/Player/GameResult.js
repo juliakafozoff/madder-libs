@@ -8,6 +8,8 @@ import axios from "../../axios";
 import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
+import PresentationMode from "../../components/PresentationMode";
+import StoryIllustration from "../../components/StoryIllustration";
 
 const GameResult = () => {
   const storyData = useSelector((state) => state.storyData);
@@ -18,6 +20,8 @@ const GameResult = () => {
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
   const [libraryInfo, setLibraryInfo] = useState(null);
+  const [showPresentation, setShowPresentation] = useState(false);
+  const [showIllustration, setShowIllustration] = useState(false);
 
   // Save completed story to backend and localStorage
   useEffect(() => {
@@ -117,8 +121,29 @@ const GameResult = () => {
     return null;
   }
 
+  const resultText = storyData.resultStory
+    .map((w) => (typeof w === "object" && w.result ? w.result : w))
+    .join(" ")
+    .trim();
+
+  const filledWords = storyData.resultStory
+    .filter((w) => typeof w === "object" && w.result)
+    .map((w) => w.result);
+
   return (
     <PageShell>
+      {showPresentation && (
+        <PresentationMode
+          title={storyData.story?.title || "Untitled"}
+          resultText={resultText}
+          filledWords={filledWords}
+          onComplete={() => {
+            setShowPresentation(false);
+            setShowIllustration(true);
+          }}
+          onClose={() => setShowPresentation(false)}
+        />
+      )}
       <Card>
         <h1 className="ui-heading" style={{
           backgroundColor: '#1f2937',
@@ -158,6 +183,25 @@ const GameResult = () => {
             }
             return <span key={index}> {word} </span>;
           })}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--spacing-lg)' }}>
+          <Button
+            onClick={() => setShowPresentation(true)}
+            style={{
+              maxWidth: '200px',
+              backgroundColor: 'transparent',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Present Story
+          </Button>
         </div>
 
         <h3 className="ui-heading ui-heading--small" style={{ marginTop: 'var(--spacing-lg)' }}>
@@ -258,6 +302,9 @@ const GameResult = () => {
               Make your own version →
             </button>
           </div>
+        )}
+        {(showIllustration || !showPresentation) && currentResultId && (
+          <StoryIllustration resultId={currentResultId} title={storyData.story?.title} />
         )}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--spacing-lg)' }}>
           <Button onClick={() => navigate("/home")} style={{ maxWidth: '200px' }}>

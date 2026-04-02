@@ -5,12 +5,16 @@ import axios from "../../axios";
 import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
+import PresentationMode from "../../components/PresentationMode";
+import StoryIllustration from "../../components/StoryIllustration";
 
 const RevealView = ({ title, story, filledWords, resultText, resultId, inviteCode, isHost }) => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showPresentation, setShowPresentation] = useState(true);
+  const [showIllustration, setShowIllustration] = useState(false);
 
   const renderStoryWithHighlights = () => {
     let gapIndex = 0;
@@ -102,6 +106,21 @@ const RevealView = ({ title, story, filledWords, resultText, resultId, inviteCod
     }
   };
 
+  if (showPresentation) {
+    return (
+      <PresentationMode
+        title={title}
+        resultText={resultText}
+        filledWords={filledWords}
+        onComplete={() => {
+          setShowPresentation(false);
+          setShowIllustration(true);
+        }}
+        onClose={() => setShowPresentation(false)}
+      />
+    );
+  }
+
   return (
     <PageShell>
       <Card wide>
@@ -129,6 +148,10 @@ const RevealView = ({ title, story, filledWords, resultText, resultId, inviteCod
         >
           {story && filledWords ? renderStoryWithHighlights() : resultText}
         </div>
+
+        {(showIllustration || !showPresentation) && resultId && (
+          <StoryIllustration resultId={resultId} title={title} />
+        )}
 
         <div
           style={{

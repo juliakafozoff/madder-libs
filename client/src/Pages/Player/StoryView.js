@@ -6,6 +6,8 @@ import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import LogoutButton from "../../components/ui/LogoutButton";
+import PresentationMode from "../../components/PresentationMode";
+import StoryIllustration from "../../components/StoryIllustration";
 import { useDispatch } from "react-redux";
 import { autoLogout } from "../../store/actions/auth";
 
@@ -17,6 +19,7 @@ const StoryView = () => {
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
   const [libraryInfo, setLibraryInfo] = useState(null);
+  const [showPresentation, setShowPresentation] = useState(false);
 
   useEffect(() => {
     // Load the specific story from localStorage
@@ -72,6 +75,15 @@ const StoryView = () => {
 
   return (
     <PageShell>
+      {showPresentation && (
+        <PresentationMode
+          title={story.title || "Untitled"}
+          resultText={story.resultText}
+          filledWords={[]}
+          onComplete={() => setShowPresentation(false)}
+          onClose={() => setShowPresentation(false)}
+        />
+      )}
       <LogoutButton onClick={handleLogout} />
       <Card>
         <h1 className="ui-heading" style={{
@@ -186,6 +198,25 @@ const StoryView = () => {
             </button>
           </div>
         )}
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--spacing-md)' }}>
+          <Button
+            onClick={() => setShowPresentation(true)}
+            style={{
+              maxWidth: '200px',
+              backgroundColor: 'transparent',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Present Story
+          </Button>
+        </div>
+        <StoryIllustration resultId={resultId} title={story.title} />
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',

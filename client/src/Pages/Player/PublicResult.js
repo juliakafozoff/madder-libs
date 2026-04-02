@@ -5,6 +5,7 @@ import axios from "../../axios";
 import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
+import StoryIllustration from "../../components/StoryIllustration";
 
 const PublicResult = () => {
   const { resultId } = useParams();
@@ -147,6 +148,7 @@ const PublicResult = () => {
         >
           {result.resultText}
         </div>
+        <StoryIllustration resultId={resultId} title={result?.title} />
         <div
           style={{
             display: "flex",
