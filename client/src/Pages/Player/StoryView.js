@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import copy from "clipboard-copy";
+import axios from "../../axios";
 import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -15,6 +16,7 @@ const StoryView = () => {
   const [story, setStory] = useState(null);
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
+  const [libraryInfo, setLibraryInfo] = useState(null);
 
   useEffect(() => {
     // Load the specific story from localStorage
@@ -25,6 +27,19 @@ const StoryView = () => {
     
     if (foundStory) {
       setStory(foundStory);
+      // Try to fetch library attribution
+      if (foundStory.templateId) {
+        axios.get(`/story/get/${foundStory.templateId}`)
+          .then((res) => {
+            if (res.data.story?.premadeTextId) {
+              return axios.get(`/library/texts/${res.data.story.premadeTextId}`);
+            }
+          })
+          .then((res) => {
+            if (res?.data?.success) setLibraryInfo(res.data.text);
+          })
+          .catch(() => {});
+      }
     } else {
       // Story not found, redirect to oldstories
       navigate("/oldstories");
@@ -68,6 +83,11 @@ const StoryView = () => {
         }}>
           {story.title || "Untitled story"}
         </h1>
+        {libraryInfo && (
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', fontStyle: 'italic', textAlign: 'center', marginTop: '-8px', marginBottom: 'var(--spacing-sm)' }}>
+            Based on {libraryInfo.title} by {libraryInfo.author}{libraryInfo.year ? ` (${libraryInfo.year})` : ''}
+          </p>
+        )}
         <p style={{
           fontSize: '14px',
           color: 'var(--text-secondary)',
@@ -154,6 +174,18 @@ const StoryView = () => {
             {copiedText ? 'Copied!' : 'Copy story'}
           </Button>
         </div>
+        {libraryInfo && (
+          <div style={{ textAlign: 'center', marginTop: 'var(--spacing-md)' }}>
+            <button
+              onClick={() => navigate(`/library/${libraryInfo.textId}/edit`)}
+              style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}
+              onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+            >
+              Make your own version →
+            </button>
+          </div>
+        )}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',

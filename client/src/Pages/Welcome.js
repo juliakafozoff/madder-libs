@@ -55,6 +55,9 @@ const Welcome = () => {
           <Button onClick={() => navigate("/create")}>
             Create Your Story
           </Button>
+          <Button variant="secondary" onClick={() => navigate("/library")}>
+            Pick a Famous Text
+          </Button>
           <Button variant="secondary" onClick={() => navigate("/login")}>
             Log In
           </Button>

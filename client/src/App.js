@@ -22,6 +22,8 @@ import {
   InviteRedirect,
   HostGame,
   PartnerView,
+  LibraryHome,
+  GapSelector,
 } from "./Pages";
 import userReducer from "./store/reducers/auth";
 import storyReducer from "./store/reducers/story";
@@ -44,6 +46,8 @@ const App = () => {
           <Router>
             <LogoRouteListener />
             <Routes>
+              <Route path="/library/:textId/edit" element={<GapSelector />} />
+              <Route path="/library" element={<LibraryHome />} />
               <Route path="/live/host/:inviteCode" element={<HostGame />} />
               <Route path="/live/play/:inviteCode" element={<PartnerView />} />
               <Route path="/result" element={<GameResult />} />

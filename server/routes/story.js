@@ -303,7 +303,7 @@ router.get("/result/:resultId", async (req, res) => {
     const { resultId } = req.params;
     const result = await StoryResult.findOne({ resultId })
       .populate('player', 'name')
-      .populate('story', 'title storyId');
+      .populate('story', 'title storyId premadeTextId');
 
     if (!result) {
       return res.status(404).json({ error: "Result not found" });

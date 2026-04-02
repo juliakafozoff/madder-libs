@@ -17,6 +17,7 @@ const GameResult = () => {
   const [currentResultId, setCurrentResultId] = useState(null);
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
+  const [libraryInfo, setLibraryInfo] = useState(null);
 
   // Save completed story to backend and localStorage
   useEffect(() => {
@@ -93,6 +94,17 @@ const GameResult = () => {
     }
   }, [storyData.story, storyData.resultStory, savedToBackend]);
 
+  // Fetch library attribution if premadeTextId exists
+  useEffect(() => {
+    if (storyData.story?.premadeTextId) {
+      axios.get(`/library/texts/${storyData.story.premadeTextId}`)
+        .then((res) => {
+          if (res.data.success) setLibraryInfo(res.data.text);
+        })
+        .catch(() => {});
+    }
+  }, [storyData.story?.premadeTextId]);
+
   // Navigate away if data is missing
   useEffect(() => {
     if (!storyData.story || !storyData.resultStory || storyData.resultStory.length === 0) {
@@ -117,6 +129,18 @@ const GameResult = () => {
         }}>
           {storyData?.story?.title}
         </h1>
+        {libraryInfo && (
+          <p style={{
+            fontSize: '14px',
+            color: 'var(--text-secondary)',
+            fontStyle: 'italic',
+            textAlign: 'center',
+            marginTop: '-8px',
+            marginBottom: 'var(--spacing-md)',
+          }}>
+            Based on {libraryInfo.title} by {libraryInfo.author}{libraryInfo.year ? ` (${libraryInfo.year})` : ''}
+          </p>
+        )}
         <div style={{
           fontSize: '18px',
           lineHeight: '1.8',
@@ -212,6 +236,27 @@ const GameResult = () => {
             >
               {copiedText ? 'Copied!' : 'Copy story'}
             </Button>
+          </div>
+        )}
+        {libraryInfo && (
+          <div style={{ textAlign: 'center', marginTop: 'var(--spacing-md)' }}>
+            <button
+              onClick={() => navigate(`/library/${libraryInfo.textId}/edit`)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-primary)',
+                fontSize: '15px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontWeight: 500,
+                textDecoration: 'none',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+            >
+              Make your own version →
+            </button>
           </div>
         )}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--spacing-lg)' }}>

@@ -14,6 +14,7 @@ const PublicResult = () => {
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
+  const [libraryInfo, setLibraryInfo] = useState(null);
 
   useEffect(() => {
     const fetchResult = async () => {
@@ -21,6 +22,14 @@ const PublicResult = () => {
         const res = await axios.get(`/story/result/${resultId}`);
         if (res.data.success && res.data.result) {
           setResult(res.data.result);
+          // Fetch library info if premadeTextId exists
+          const ptid = res.data.result.story?.premadeTextId;
+          if (ptid) {
+            try {
+              const libRes = await axios.get(`/library/texts/${ptid}`);
+              if (libRes.data.success) setLibraryInfo(libRes.data.text);
+            } catch (e) {}
+          }
         } else {
           setError("Story not found");
         }
@@ -108,6 +117,11 @@ const PublicResult = () => {
         >
           {result.title || "Untitled story"}
         </h1>
+        {libraryInfo && (
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', fontStyle: 'italic', textAlign: 'center', marginTop: '-8px', marginBottom: 'var(--spacing-md)' }}>
+            Based on {libraryInfo.title} by {libraryInfo.author}{libraryInfo.year ? ` (${libraryInfo.year})` : ''}
+          </p>
+        )}
         {date && (
           <p
             style={{
@@ -178,6 +192,16 @@ const PublicResult = () => {
             marginTop: "var(--spacing-lg)",
           }}
         >
+          {libraryInfo && (
+            <button
+              onClick={() => navigate(`/library/${libraryInfo.textId}/edit`)}
+              style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500, marginRight: 'var(--spacing-md)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+            >
+              Make your own version →
+            </button>
+          )}
           <Button
             variant="tertiary"
             onClick={() => navigate("/home")}

@@ -30,6 +30,9 @@ const Home = () => {
         <Button onClick={() => navigate("/create")}>
           Create a Game
         </Button>
+        <Button variant="secondary" onClick={() => navigate("/library")}>
+          Pick a Famous Text
+        </Button>
         <Button onClick={() => navigate("/join")}>
           Join a Game
         </Button>

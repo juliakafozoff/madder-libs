@@ -23,6 +23,10 @@ import InviteRedirect from "./InviteRedirect";
 import HostGame from "./LiveGame/HostGame";
 import PartnerView from "./LiveGame/PartnerView";
 
+//Library
+import LibraryHome from "./Library/LibraryHome";
+import GapSelector from "./Library/GapSelector";
+
 export {
   Welcome,
   Home,
@@ -41,4 +45,6 @@ export {
   InviteRedirect,
   HostGame,
   PartnerView,
+  LibraryHome,
+  GapSelector,
 };

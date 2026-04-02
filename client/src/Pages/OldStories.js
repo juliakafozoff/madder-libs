@@ -413,9 +413,25 @@ const OldStories = () => {
                 <p style={{
                   fontSize: '14px',
                   color: 'var(--text-secondary)',
-                  margin: 0
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
                 }}>
                   {statusText}
+                  {template.premadeTextId && (
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      backgroundColor: '#e0e7ff',
+                      color: '#3730a3',
+                    }}>
+                      From Library
+                    </span>
+                  )}
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>

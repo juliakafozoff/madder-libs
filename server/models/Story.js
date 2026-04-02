@@ -18,6 +18,7 @@ const storySchema = new mongoose.Schema(
       type: [],
     },
     user: { type: mongoose.Types.ObjectId, ref: "users", required: false },
+    premadeTextId: { type: String },
   },
   {
     timestamps: true,
