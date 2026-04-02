@@ -18,6 +18,7 @@ const GapSelector = () => {
   const [headerCollapsed, setHeaderCollapsed] = useState(window.innerWidth < 768);
   const [saving, setSaving] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  const [activeTypePicker, setActiveTypePicker] = useState(null);
 
   useEffect(() => {
     const fetchText = async () => {
@@ -84,6 +85,14 @@ const GapSelector = () => {
   const clearAll = () => {
     setGaps({});
   };
+
+  // Close type picker when clicking outside
+  useEffect(() => {
+    if (activeTypePicker === null) return;
+    const handleClick = () => setActiveTypePicker(null);
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, [activeTypePicker]);
 
   const handleCreate = async () => {
     if (gapCount === 0) return;
@@ -503,11 +512,11 @@ const GapSelector = () => {
             }
 
             const isGap = !!gaps[index];
+            const isPickerOpen = activeTypePicker === index;
 
             return (
               <span
                 key={index}
-                onClick={() => toggleGap(index)}
                 style={{
                   display: "inline",
                   padding: "3px 2px",
@@ -537,8 +546,17 @@ const GapSelector = () => {
               >
                 {isGap ? (
                   <>
-                    <span style={{ opacity: 0.35 }}>{word}</span>
                     <span
+                      onClick={() => toggleGap(index)}
+                      style={{ opacity: 0.35, cursor: "pointer" }}
+                    >
+                      {word}
+                    </span>
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveTypePicker(isPickerOpen ? null : index);
+                      }}
                       style={{
                         display: "inline-block",
                         marginLeft: "2px",
@@ -550,13 +568,66 @@ const GapSelector = () => {
                         color: "#fff",
                         verticalAlign: "super",
                         lineHeight: "1.4",
+                        cursor: "pointer",
+                        position: "relative",
                       }}
                     >
                       {gaps[index].type}
+                      {isPickerOpen && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            position: "absolute",
+                            top: "calc(100% + 4px)",
+                            left: "0",
+                            backgroundColor: "#fff",
+                            border: "1px solid var(--border-color)",
+                            borderRadius: "var(--radius-sm)",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                            zIndex: 100,
+                            minWidth: "120px",
+                            padding: "4px 0",
+                          }}
+                        >
+                          {WORD_TYPES.map((t) => (
+                            <div
+                              key={t}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateGapType(index, t);
+                                setActiveTypePicker(null);
+                              }}
+                              style={{
+                                padding: "6px 12px",
+                                fontSize: "13px",
+                                cursor: "pointer",
+                                color: "var(--text-primary)",
+                                backgroundColor:
+                                  gaps[index].type === t
+                                    ? "rgba(243, 129, 0, 0.1)"
+                                    : "transparent",
+                                fontWeight: gaps[index].type === t ? 600 : 400,
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor =
+                                  "rgba(243, 129, 0, 0.08)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor =
+                                  gaps[index].type === t
+                                    ? "rgba(243, 129, 0, 0.1)"
+                                    : "transparent";
+                              }}
+                            >
+                              {t}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </span>
                   </>
                 ) : (
-                  word
+                  <span onClick={() => toggleGap(index)}>{word}</span>
                 )}
               </span>
             );
