@@ -216,7 +216,7 @@ const GapSelector = () => {
   const diff = difficultyLabel();
 
   return (
-    <PageShell>
+    <PageShell className="gap-selector-shell">
       <Card style={{ maxWidth: "800px", paddingBottom: "100px" }}>
         {/* Back to Library */}
         <button
