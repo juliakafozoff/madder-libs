@@ -145,6 +145,23 @@ const LibraryHome = () => {
   return (
     <PageShell>
       <Card style={{ maxWidth: "900px" }}>
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--text-secondary)",
+            cursor: "pointer",
+            padding: "0",
+            marginBottom: "var(--spacing-md)",
+            fontSize: "14px",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+          }}
+        >
+          ← Home
+        </button>
         <h1 className="ui-heading">Pick a Famous Text</h1>
         <p
           className="ui-text ui-text--secondary"
