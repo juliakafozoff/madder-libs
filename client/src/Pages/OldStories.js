@@ -419,6 +419,43 @@ const OldStories = () => {
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
+                {template.inviteCode && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate(`/live/host/${template.inviteCode}`);
+                    }}
+                    style={{
+                      padding: 'var(--spacing-xs) var(--spacing-sm)',
+                      border: '1px solid var(--color-primary)',
+                      backgroundColor: 'transparent',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 'var(--radius-sm)',
+                      transition: 'all var(--transition-base)',
+                      pointerEvents: 'auto',
+                      fontSize: '12px',
+                      fontWeight: 'var(--font-weight-medium)',
+                      color: 'var(--color-primary)',
+                      whiteSpace: 'nowrap'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--color-primary)';
+                      e.currentTarget.style.color = '#ffffff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = 'var(--color-primary)';
+                    }}
+                    title="Play Live with a partner"
+                  >
+                    Play Live
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={(e) => handleCopyCode(e, template.storyId)}
@@ -442,12 +479,12 @@ const OldStories = () => {
                   }}
                   title="Copy code"
                 >
-                  <ClipboardCopyIcon 
-                    className="w-5 h-5" 
-                    style={{ 
+                  <ClipboardCopyIcon
+                    className="w-5 h-5"
+                    style={{
                       color: 'var(--text-secondary)',
                       flexShrink: 0
-                    }} 
+                    }}
                   />
                 </button>
                 <ChevronRightIcon 

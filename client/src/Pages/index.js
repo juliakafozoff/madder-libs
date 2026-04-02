@@ -19,6 +19,10 @@ import StoryView from "./Player/StoryView";
 import PublicResult from "./Player/PublicResult";
 import InviteRedirect from "./InviteRedirect";
 
+//Live Game
+import HostGame from "./LiveGame/HostGame";
+import PartnerView from "./LiveGame/PartnerView";
+
 export {
   Welcome,
   Home,
@@ -35,4 +39,6 @@ export {
   StoryView,
   PublicResult,
   InviteRedirect,
+  HostGame,
+  PartnerView,
 };

@@ -1,12 +1,16 @@
 require("dotenv").config();
 
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 const userRouter = require("./routes/user");
 const storyRouter = require("./routes/story");
+const initGameHandler = require("./sockets/gameHandler");
 
 const app = express();
+const server = http.createServer(app);
 
 // Apply CORS middleware BEFORE routes
 // Allowlist includes both apex and www domains to support users accessing either variant
@@ -73,11 +77,20 @@ app.get("/", (req, res) => {
   res.send("ho");
 });
 
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+initGameHandler(io);
+
 const PORT = process.env.PORT || 5000;
 
 // Start server first, then connect to database
 // This ensures the server can respond even if DB connection fails initially
-app.listen(PORT, async () => {
+server.listen(PORT, async () => {
   console.log(`Server is up and running on port ${PORT}`);
   console.log(`MONGO_URI is set: ${!!process.env.MONGO_URI}`);
   

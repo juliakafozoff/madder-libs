@@ -397,6 +397,13 @@ const CreateGame = () => {
             <Button onClick={continueToBuilder}>
               Continue to story
         </Button>
+            <Button
+              variant="secondary"
+              onClick={() => navigate(`/live/host/${inviteCode}`)}
+              style={{ marginTop: 'var(--spacing-sm)' }}
+            >
+              Play Live with a Partner
+            </Button>
           </>
         )}
       </Card>

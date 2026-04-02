@@ -20,6 +20,8 @@ import {
   PublicResult,
   Welcome,
   InviteRedirect,
+  HostGame,
+  PartnerView,
 } from "./Pages";
 import userReducer from "./store/reducers/auth";
 import storyReducer from "./store/reducers/story";
@@ -42,6 +44,8 @@ const App = () => {
           <Router>
             <LogoRouteListener />
             <Routes>
+              <Route path="/live/host/:inviteCode" element={<HostGame />} />
+              <Route path="/live/play/:inviteCode" element={<PartnerView />} />
               <Route path="/result" element={<GameResult />} />
               <Route path="/result/:resultId" element={<PublicResult />} />
               <Route path="/play" element={<PlayGame />} />

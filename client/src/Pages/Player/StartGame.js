@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { ArrowNarrowRightIcon } from "@heroicons/react/outline";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import axios from "../../axios";
 import { setStory } from "../../store/actions/story";
+import { getSocket, disconnectSocket } from "../../services/socket";
 import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -16,6 +17,10 @@ const StartGame = () => {
   const { id } = useParams();
   const story = useSelector((state) => state.storyData.story);
   const [error, setError] = useState(null);
+  const [checkingLive, setCheckingLive] = useState(true);
+  const [joiningLive, setJoiningLive] = useState(false);
+  const [liveTitle, setLiveTitle] = useState(null);
+  const socketCleanup = useRef(null);
 
   useEffect(() => {
     const fetchStory = async () => {
@@ -24,24 +29,89 @@ const StartGame = () => {
         const headers = {
           "Content-Type": "application/json",
         };
-        
+
         if (token) {
           headers.authorization = token;
         }
-        
+
         const response = await axios.get(`/story/get/${id}`, {
           headers,
         });
         dispatch(setStory(response.data.story));
+
+        // After fetching story, check for live session
+        const inviteCode = response.data.story?.inviteCode || id;
+        checkForLiveSession(inviteCode);
       } catch (err) {
         console.error("Failed to fetch story:", err);
         setError("Failed to load the story. Please check your connection and try again.");
+        setCheckingLive(false);
       }
     };
     fetchStory();
+
+    return () => {
+      if (socketCleanup.current) {
+        socketCleanup.current();
+      }
+    };
   }, [id, dispatch]);
 
+  const checkForLiveSession = (inviteCode) => {
+    try {
+      const socket = getSocket();
+
+      const onFound = ({ inviteCode: code, title }) => {
+        setJoiningLive(true);
+        setLiveTitle(title);
+        cleanup();
+        setTimeout(() => {
+          navigate(`/live/play/${code}`, { replace: true });
+        }, 1500);
+      };
+
+      const onNotFound = () => {
+        setCheckingLive(false);
+        cleanup();
+      };
+
+      const onError = () => {
+        setCheckingLive(false);
+        cleanup();
+      };
+
+      const cleanup = () => {
+        socket.off("live-session-found", onFound);
+        socket.off("live-session-not-found", onNotFound);
+        socket.off("connect_error", onError);
+      };
+
+      socketCleanup.current = () => {
+        cleanup();
+        disconnectSocket();
+      };
+
+      socket.on("live-session-found", onFound);
+      socket.on("live-session-not-found", onNotFound);
+      socket.on("connect_error", onError);
+
+      socket.emit("check-live-session", { inviteCode });
+
+      // Timeout fallback — if no response in 3 seconds, proceed with solo mode
+      setTimeout(() => {
+        setCheckingLive(false);
+        cleanup();
+      }, 3000);
+    } catch {
+      setCheckingLive(false);
+    }
+  };
+
   const startGame = () => {
+    if (socketCleanup.current) {
+      socketCleanup.current();
+      socketCleanup.current = null;
+    }
     navigate("/play");
   };
 
@@ -68,7 +138,32 @@ const StartGame = () => {
     );
   }
 
-  if (!story) {
+  // Joining a live game — show transition message
+  if (joiningLive) {
+    return (
+      <PageShell>
+        <Card>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 'var(--spacing-md)',
+            padding: 'var(--spacing-xl) 0'
+          }}>
+            <div className="loader" style={{ margin: '0 auto' }}></div>
+            <h2 className="ui-heading ui-heading--small" style={{ margin: 0 }}>
+              {liveTitle ? `Joining "${liveTitle}"...` : "Joining live game..."}
+            </h2>
+            <p className="ui-text ui-text--secondary" style={{ textAlign: 'center' }}>
+              Someone is waiting for you! Joining live game...
+            </p>
+          </div>
+        </Card>
+      </PageShell>
+    );
+  }
+
+  if (!story || checkingLive) {
     return (
       <PageShell>
         <Card>
@@ -106,9 +201,9 @@ const StartGame = () => {
           }}>
             {story?.title || "Untitled Story"}
           </h2>
-          <Button 
+          <Button
             onClick={startGame}
-            style={{ 
+            style={{
               width: '100%',
               maxWidth: '100%',
               display: 'flex',

@@ -110,7 +110,7 @@ router.get("/stories", authenticate, async (req, res) => {
   try {
     const user = await User.findById({ _id: req.userId }).populate(
       "storiesCreated storiesPlayed",
-      ["title", "storyId", "_id"]
+      ["title", "storyId", "_id", "inviteCode"]
     );
     res.status(200).json({ success: true, user: user });
   } catch (error) {
