@@ -8,38 +8,36 @@ import Button from "../components/ui/Button";
 import LogoutButton from "../components/ui/LogoutButton";
 import RotatingLogo from "../components/RotatingLogo";
 
-const Tooltip = ({ text, children }) => {
+const ButtonWithHint = ({ hint, children }) => {
   const [visible, setVisible] = useState(false);
   return (
     <div
-      style={{ position: "relative", width: "100%" }}
+      style={{ width: "100%" }}
       onMouseEnter={() => setVisible(true)}
       onMouseLeave={() => setVisible(false)}
     >
       {children}
-      {visible && (
-        <div
+      <div
+        style={{
+          overflow: "hidden",
+          maxHeight: visible ? "40px" : "0",
+          opacity: visible ? 1 : 0,
+          transition: "max-height 0.2s ease, opacity 0.2s ease",
+          marginTop: visible ? "4px" : "0",
+        }}
+      >
+        <p
           style={{
-            position: "absolute",
-            bottom: "calc(100% + 8px)",
-            left: "50%",
-            transform: "translateX(-50%)",
-            backgroundColor: "rgba(0, 0, 0, 0.85)",
-            color: "#fff",
-            fontSize: "13px",
-            lineHeight: 1.4,
-            padding: "8px 12px",
-            borderRadius: "6px",
-            whiteSpace: "normal",
-            width: "220px",
+            fontSize: "12px",
+            color: "var(--text-secondary)",
             textAlign: "center",
-            pointerEvents: "none",
-            zIndex: 10,
+            margin: 0,
+            lineHeight: 1.4,
           }}
         >
-          {text}
-        </div>
-      )}
+          {hint}
+        </p>
+      </div>
     </div>
   );
 };
@@ -66,16 +64,16 @@ const Home = () => {
         <h1 className="ui-heading ui-heading--large">
           {isAuthenticated && user?.name ? `Hey, ${user.name.split(' ')[0]}!` : 'Welcome'}
         </h1>
-        <Tooltip text="Write your own story and choose which words become blanks for your friends to fill in">
+        <ButtonWithHint hint="Write your own story and choose which words become blanks for your friends to fill in">
           <Button onClick={() => navigate("/create")}>
             Create a Game
           </Button>
-        </Tooltip>
-        <Tooltip text="Choose from classic speeches, poems, and more — then pick which words to blank out">
+        </ButtonWithHint>
+        <ButtonWithHint hint="Choose from classic speeches, poems, and more — then pick which words to blank out">
           <Button variant="secondary" onClick={() => navigate("/library")}>
             Pick a Famous Text
           </Button>
-        </Tooltip>
+        </ButtonWithHint>
         <Button onClick={() => navigate("/join")}>
           Join a Game
         </Button>
