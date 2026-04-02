@@ -218,6 +218,24 @@ const GapSelector = () => {
   return (
     <PageShell>
       <Card style={{ maxWidth: "800px", paddingBottom: "100px" }}>
+        {/* Back to Library */}
+        <button
+          onClick={() => navigate("/library")}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--text-secondary)",
+            cursor: "pointer",
+            padding: "0",
+            marginBottom: "var(--spacing-md)",
+            fontSize: "14px",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+          }}
+        >
+          ← Back to Library
+        </button>
         {/* Header */}
         <div style={{ marginBottom: "var(--spacing-lg)" }}>
           <div
