@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -7,6 +7,42 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import LogoutButton from "../components/ui/LogoutButton";
 import RotatingLogo from "../components/RotatingLogo";
+
+const Tooltip = ({ text, children }) => {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div
+      style={{ position: "relative", width: "100%" }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      {children}
+      {visible && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "calc(100% + 8px)",
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "rgba(0, 0, 0, 0.85)",
+            color: "#fff",
+            fontSize: "13px",
+            lineHeight: 1.4,
+            padding: "8px 12px",
+            borderRadius: "6px",
+            whiteSpace: "normal",
+            width: "220px",
+            textAlign: "center",
+            pointerEvents: "none",
+            zIndex: 10,
+          }}
+        >
+          {text}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Home = () => {
   const navigate = useNavigate();
@@ -30,12 +66,16 @@ const Home = () => {
         <h1 className="ui-heading ui-heading--large">
           {isAuthenticated && user?.name ? `Hey, ${user.name.split(' ')[0]}!` : 'Welcome'}
         </h1>
-        <Button onClick={() => navigate("/create")} title="Write your own story and choose which words become blanks for your friends to fill in">
-          Create a Game
-        </Button>
-        <Button variant="secondary" onClick={() => navigate("/library")} title="Choose from classic speeches, poems, and more — then pick which words to blank out">
-          Pick a Famous Text
-        </Button>
+        <Tooltip text="Write your own story and choose which words become blanks for your friends to fill in">
+          <Button onClick={() => navigate("/create")}>
+            Create a Game
+          </Button>
+        </Tooltip>
+        <Tooltip text="Choose from classic speeches, poems, and more — then pick which words to blank out">
+          <Button variant="secondary" onClick={() => navigate("/library")}>
+            Pick a Famous Text
+          </Button>
+        </Tooltip>
         <Button onClick={() => navigate("/join")}>
           Join a Game
         </Button>
