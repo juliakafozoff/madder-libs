@@ -10,6 +10,7 @@ const storyRouter = require("./routes/story");
 const libraryRouter = require("./routes/library");
 const authRouter = require("./routes/auth");
 const initGameHandler = require("./sockets/gameHandler");
+const seedLibraryTexts = require("./data/seedOnStart");
 
 const app = express();
 const server = http.createServer(app);
@@ -102,6 +103,7 @@ server.listen(PORT, async () => {
   try {
     await connectDB();
     console.log("MongoDB connection successful");
+    seedLibraryTexts();
   } catch (error) {
     console.error("Failed to connect to database:", error.message);
     console.error("Server will continue running but database operations will fail");
@@ -112,6 +114,7 @@ server.listen(PORT, async () => {
       try {
         await connectDB();
         console.log("MongoDB reconnection successful");
+        seedLibraryTexts();
       } catch (retryError) {
         console.error("MongoDB reconnection failed:", retryError.message);
       }
