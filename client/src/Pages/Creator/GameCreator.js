@@ -137,6 +137,23 @@ const GameCreator = () => {
     <PageShell wide>
       {token && <LogoutButton onClick={handleLogout} />}
       <Card wide>
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--text-secondary)",
+            cursor: "pointer",
+            padding: "0",
+            marginBottom: "var(--spacing-md)",
+            fontSize: "14px",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+          }}
+        >
+          ← Home
+        </button>
         <h1 className="ui-heading" style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
           {isPreview ? 'Preview & Share' : 'Create Your Story'}
           {isPreview && (
