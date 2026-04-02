@@ -30,10 +30,10 @@ const Home = () => {
         <h1 className="ui-heading ui-heading--large">
           {isAuthenticated && user?.name ? `Hey, ${user.name.split(' ')[0]}!` : 'Welcome'}
         </h1>
-        <Button onClick={() => navigate("/create")}>
+        <Button onClick={() => navigate("/create")} title="Write your own story and choose which words become blanks for your friends to fill in">
           Create a Game
         </Button>
-        <Button variant="secondary" onClick={() => navigate("/library")}>
+        <Button variant="secondary" onClick={() => navigate("/library")} title="Choose from classic speeches, poems, and more — then pick which words to blank out">
           Pick a Famous Text
         </Button>
         <Button onClick={() => navigate("/join")}>
