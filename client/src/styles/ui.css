@@ -72,7 +72,7 @@
 }
 
 .gap-selector-shell {
-  justify-content: flex-start;
+  align-items: flex-start;
   padding-top: var(--spacing-xl);
   padding-bottom: 80px;
 }
