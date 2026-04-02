@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import copy from "clipboard-copy";
 import axios from "../../axios";
+import { shareOrCopy } from "../../utils/share";
 import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -217,27 +218,13 @@ const GameResult = () => {
             <Button
               onClick={async () => {
                 const url = `${window.location.origin}/result/${currentResultId}`;
-                if (navigator.share) {
-                  try {
-                    const resultText = storyData.resultStory
-                      .map((w) => (typeof w === "object" && w.result ? w.result : w))
-                      .join(" ")
-                      .trim();
-                    const teaser = resultText.length > 100 ? resultText.slice(0, 100) + "…" : resultText;
-                    await navigator.share({
-                      title: `"${storyData.story?.title}" — Glad Libs`,
-                      text: teaser,
-                      url,
-                    });
-                  } catch (err) {
-                    if (err.name !== 'AbortError') {
-                      copy(url);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                    }
-                  }
-                } else {
-                  copy(url);
+                const teaser = resultText.length > 100 ? resultText.slice(0, 100) + "…" : resultText;
+                const { method } = await shareOrCopy({
+                  title: `"${storyData.story?.title}" — Glad Libs`,
+                  text: teaser,
+                  url,
+                });
+                if (method === "copied") {
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }

@@ -15,3 +15,7 @@
   function = "og-tags"
   path = "/result/*"
 
+[[edge_functions]]
+  function = "og-tags"
+  path = "/library/*"
+

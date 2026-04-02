@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import copy from "clipboard-copy";
 import { useNavigate } from "react-router-dom";
 import axios from "../../axios";
+import { shareOrCopy } from "../../utils/share";
 import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -69,23 +70,13 @@ const RevealView = ({ title, story, filledWords, resultText, resultId, inviteCod
 
   const handleShare = async () => {
     const url = `${window.location.origin}/result/${resultId}`;
-    if (navigator.share) {
-      try {
-        const teaser = resultText.length > 100 ? resultText.slice(0, 100) + "\u2026" : resultText;
-        await navigator.share({
-          title: `"${title}" — Glad Libs`,
-          text: teaser,
-          url,
-        });
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          copy(url);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        }
-      }
-    } else {
-      copy(url);
+    const teaser = resultText.length > 100 ? resultText.slice(0, 100) + "\u2026" : resultText;
+    const { method } = await shareOrCopy({
+      title: `"${title}" — Glad Libs`,
+      text: teaser,
+      url,
+    });
+    if (method === "copied") {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }

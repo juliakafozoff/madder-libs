@@ -4,6 +4,7 @@ import copy from "clipboard-copy";
 import { ClipboardCopyIcon } from "@heroicons/react/outline";
 import { useNavigate } from "react-router-dom";
 import axios from "../../axios";
+import { shareOrCopy } from "../../utils/share";
 import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -36,24 +37,17 @@ const CreateGame = () => {
 
   const shareInviteLink = async () => {
     if (!inviteCode) return;
-    const shareData = {
+    const { method } = await shareOrCopy({
       title: 'Play my Glad Libs story!',
       text: 'Come play my Glad Libs story!',
       url: getInviteLink(),
-    };
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-        setShared(true);
-        setTimeout(() => setShared(false), 2000);
-      } catch (err) {
-        // User cancelled or share failed — fall back to copy
-        if (err.name !== 'AbortError') {
-          copyInviteLink();
-        }
-      }
-    } else {
-      copyInviteLink();
+    });
+    if (method === "shared") {
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } else if (method === "copied") {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 

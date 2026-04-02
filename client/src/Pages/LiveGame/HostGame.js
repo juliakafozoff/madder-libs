@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import copy from "clipboard-copy";
 import { ClipboardCopyIcon } from "@heroicons/react/outline";
 import { getSocket, disconnectSocket } from "../../services/socket";
+import { QRCodeSVG } from "qrcode.react";
 import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -420,6 +421,17 @@ const HostGame = () => {
               </div>
             </div>
 
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 'var(--spacing-sm)' }}>
+              <QRCodeSVG
+                value={getInviteLink()}
+                size={200}
+                level="M"
+                style={{ borderRadius: 'var(--radius-sm)' }}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: 'var(--spacing-sm)' }}>
+                Scan to play
+              </span>
+            </div>
             <p className="ui-text ui-text--secondary" style={{ fontSize: "13px", textAlign: "center" }}>
               Share this code with a friend — they'll fill in the words blind!
             </p>

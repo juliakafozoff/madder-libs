@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import copy from "clipboard-copy";
 import axios from "../../axios";
+import { shareOrCopy } from "../../utils/share";
 import PageShell from "../../components/ui/PageShell";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -128,25 +129,15 @@ const StoryView = () => {
           <Button
             onClick={async () => {
               const url = `${window.location.origin}/result/${resultId}`;
-              if (navigator.share) {
-                try {
-                  const teaser = story.resultText && story.resultText.length > 100
-                    ? story.resultText.slice(0, 100) + "…"
-                    : (story.resultText || "Check out this Glad Libs story!");
-                  await navigator.share({
-                    title: `"${story.title}" — Glad Libs`,
-                    text: teaser,
-                    url,
-                  });
-                } catch (err) {
-                  if (err.name !== 'AbortError') {
-                    copy(url);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  }
-                }
-              } else {
-                copy(url);
+              const teaser = story.resultText && story.resultText.length > 100
+                ? story.resultText.slice(0, 100) + "…"
+                : (story.resultText || "Check out this Glad Libs story!");
+              const { method } = await shareOrCopy({
+                title: `"${story.title}" — Glad Libs`,
+                text: teaser,
+                url,
+              });
+              if (method === "copied") {
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
               }

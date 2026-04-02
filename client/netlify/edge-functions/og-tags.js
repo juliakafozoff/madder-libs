@@ -117,10 +117,49 @@ export default async function handler(request, context) {
     );
   }
 
+  // Match /library/:textId/edit
+  const libraryMatch = path.match(/^\/library\/([^/]+)\/edit$/);
+  if (libraryMatch) {
+    const textId = libraryMatch[1];
+    try {
+      const res = await fetch(`${BACKEND_URL}/library/texts/${textId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.text;
+        if (text) {
+          const safe = escapeHtml(text.title || "Untitled");
+          const author = text.author ? escapeHtml(text.author) : "";
+          return new Response(
+            buildHtml({
+              title: `Make "${safe}" into a Glad Libs game`,
+              description: author
+                ? `Turn "${safe}" by ${author} into a hilarious fill-in-the-blank story!`
+                : `Turn "${safe}" into a hilarious fill-in-the-blank story!`,
+              url: `${origin}${path}`,
+              image,
+            }),
+            { headers: { "content-type": "text/html; charset=utf-8" } }
+          );
+        }
+      }
+    } catch (_) {
+      // fall through
+    }
+    return new Response(
+      buildHtml({
+        title: "Create a Glad Libs game from a famous text",
+        description: "Pick a famous speech, poem, or story and turn it into a hilarious fill-in-the-blank game!",
+        url: `${origin}${path}`,
+        image,
+      }),
+      { headers: { "content-type": "text/html; charset=utf-8" } }
+    );
+  }
+
   // Not a matched path — let Netlify serve normally
   return;
 }
 
 export const config = {
-  path: ["/start/*", "/result/*"],
+  path: ["/start/*", "/result/*", "/library/*"],
 };
