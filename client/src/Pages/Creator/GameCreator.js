@@ -1,6 +1,7 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
+import { v4 as uuidv4 } from "uuid";
 import axios from "../../axios";
 import { setStory } from "../../store/actions/story";
 import PageShell from "../../components/ui/PageShell";
@@ -34,7 +35,8 @@ const GameCreator = () => {
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { id } = useParams();
+  const { id: paramId } = useParams();
+  const id = useMemo(() => paramId || uuidv4(), [paramId]);
 
   const handleLogout = async () => {
     await dispatch(autoLogout());
@@ -109,6 +111,11 @@ const GameCreator = () => {
     }
 
     try {
+      // Create the story record if it doesn't exist yet
+      if (!paramId) {
+        await axios.post("/story/create", { id }, { headers });
+      }
+
       const response = await axios.put(
         `/story/update/${id}`,
         {
